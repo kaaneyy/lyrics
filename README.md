@@ -4,15 +4,30 @@ A self-contained, single-file songwriting studio. Paste raw lyrics, auto-structu
 them into sections, then sharpen them with focused AI tools — all with the goal of a
 **better song using the smallest possible changes to your original words.**
 
-No build step, no server, no dependencies. Just open `index.html` in a browser.
+No build step, no dependencies. Two ways to run it:
 
 ## Quick start
 
+### Option A — recommended: local server holds your keys
+```bash
+cp .env.example .env    # put your API key(s) in .env
+node server.js          # zero dependencies, Node 18+
+# open http://localhost:8765
+```
+The browser talks only to your local backend — **API keys never enter the browser
+or localStorage**. The Settings key field disappears automatically in this mode.
+
+### Option B — no server: open `index.html` directly
 1. Open `index.html` in any modern browser.
 2. On first launch it asks for an **API key** from one of:
    - **Claude** (Anthropic) — `console.anthropic.com`
    - **ChatGPT** (OpenAI) — `platform.openai.com`
    - **DeepSeek** — `platform.deepseek.com`
+
+   In this mode the key is kept in this browser's localStorage and sent only to
+   the provider you chose.
+
+Then, either way:
 3. Paste your raw song into the left panel.
 4. Hit **✨ Initial Analysis** — the AI restructures the song into `[Verse]`,
    `[Chorus]`, `[Bridge]` sections (keeping your words), **captures the song's
@@ -84,9 +99,40 @@ Every tool:
 - "Test connection" button in Settings to validate a key before committing.
 - Switch providers/models any time in ⚙️ Settings without losing your work.
 
+## Quality-of-life
+
+- **Live streaming** — AI responses render token-by-token, with a **■ Stop** button
+  that aborts the request mid-flight.
+- **Token costs** — every result shows tokens used (in/out), with a session total
+  on hover.
+- **Undo-friendly** — applied edits go through the browser's native edit stack, so
+  `Ctrl/Cmd+Z` reverses them right in the editor.
+- **Hover preview** — hovering a suggestion card highlights the exact line that
+  will change (and scrolls to it) before you commit.
+- **Result history** — the last 3 suggestion sets are kept (and survive reloads);
+  flip back with the ‹ › arrows in the panel header.
+- **Ask anything** — a free-text box sends any custom request as its own tool, with
+  the same selection scoping and inline-apply cards.
+- **Robust parsing** — if the model returns malformed edit JSON, LyricLab retries
+  once automatically and tells you if it still failed (never a silent empty panel).
+- **Re-detect identity** — a button in 🧠 Song Memory re-runs identity capture on
+  the current lyrics without resetting anything.
+- **Real pronunciation data** — the CMU pronouncing dictionary is loaded in the
+  background; syllable counts and rhyme detection use true phonemes (with a
+  heuristic fallback offline), and measured counts are sent to the Meter/Rhyme
+  tools as ground truth.
+- **Non-English aware** — syllable/rhyme numbers hide automatically when the
+  lyrics aren't English, instead of showing wrong data.
+- **Phone-friendly** — below 860 px the three panels become tabs (Lyrics / AI /
+  Tools) with proper page scrolling; running a tool jumps you to the AI tab.
+- **Accessible** — icon buttons carry aria-labels; dialogs trap focus while open
+  and return it on close.
+- **Storage-safe** — if the browser's storage quota fills up, you get a clear
+  warning instead of silent data loss.
+
 ## Notes
 
 - Default models: `claude-opus-4-8`, `gpt-4o`, `deepseek-chat` — all editable in Settings.
-- Claude is called with the direct-browser-access header so it works client-side.
-- Everything is one file (`index.html`). Fork it, host it anywhere static, or just
-  double-click it.
+- In browser-key mode, Claude is called with the direct-browser-access header.
+- The frontend is still one file (`index.html`); `server.js` is an optional
+  zero-dependency key-holding proxy.

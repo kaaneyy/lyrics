@@ -205,6 +205,50 @@
   .sg-btn.ins{color:var(--accent);border-color:#2c3a63}
   .sg-done{font-size:10.5px;color:var(--good);margin-left:auto;font-weight:600}
 
+  /* streaming */
+  .streambox{font-family:var(--mono);font-size:12.5px;line-height:1.65;color:var(--ink-dim);white-space:pre-wrap;word-break:break-word;background:#0d0f16;border:1px solid var(--edge);border-radius:9px;padding:12px;max-height:56vh;overflow:auto;margin-top:4px}
+  .streambox .cursor{display:inline-block;width:7px;height:13px;background:var(--accent);animation:blink 1s steps(1) infinite;vertical-align:text-bottom}
+  @keyframes blink{50%{opacity:0}}
+  .stream-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .stop-btn{background:#2a1a1f;border:1px solid #5a2a32;color:#ffb3bd;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600}
+  .stop-btn:hover{background:#3a2228}
+  .usage-chip{display:inline-flex;gap:5px;font-size:10.5px;color:var(--ink-faint);border:1px solid var(--edge);border-radius:12px;padding:3px 9px;margin-left:8px;vertical-align:middle}
+  .warn-banner{border:1px solid #5a4a2a;background:#241f12;color:var(--warn);border-radius:9px;padding:9px 12px;font-size:12px;margin:0 0 12px;line-height:1.5}
+
+  /* editor line preview highlight */
+  .editor-wrap{position:relative}
+  #lineHL{position:absolute;background:rgba(124,156,255,.16);border-left:3px solid var(--accent);right:0;pointer-events:none;display:none;z-index:3;border-radius:3px}
+
+  /* suggestion history nav */
+  .hist-nav{display:flex;align-items:center;gap:2px;font-size:11px;color:var(--ink-faint)}
+  .hist-nav span{min-width:26px;text-align:center}
+
+  /* free-text ask box */
+  .ask-wrap{display:flex;gap:6px}
+  .ask-wrap input{flex:1;min-width:0;background:#0f1118;border:1px solid var(--edge);color:var(--ink);border-radius:8px;padding:8px 10px;font-size:12px;font-family:inherit;outline:none}
+  .ask-wrap input:focus{border-color:var(--accent)}
+  .ask-wrap .btn{padding:8px 12px}
+
+  /* mobile: tabbed panels */
+  #mobileTabs{display:none;position:fixed;bottom:0;left:0;right:0;z-index:40;background:#12151d;border-top:1px solid var(--edge);padding:6px 8px calc(6px + env(safe-area-inset-bottom));gap:6px}
+  #mobileTabs button{flex:1;background:transparent;border:1px solid transparent;color:var(--ink-dim);padding:9px 6px;border-radius:9px;font-size:12.5px;font-weight:600}
+  #mobileTabs button.active{background:var(--panel-2);color:#fff;border-color:var(--edge)}
+  @media (max-width:860px){
+    html,body{height:auto}
+    body{overflow:auto}
+    header{flex-wrap:wrap;position:sticky;top:0;z-index:30;gap:8px}
+    header .topbtn{padding:6px 9px;font-size:11.5px}
+    .provider-pill{display:none}
+    main{display:block;min-height:0;padding-bottom:64px}
+    .panel{display:none;width:100%;border-right:none;border-bottom:1px solid var(--edge)}
+    .panel.m-active{display:flex}
+    #lyricsPanel,#suggestPanel,#controlsPanel{flex:none}
+    .editor-wrap{height:56vh}
+    #suggestBody{max-height:none}
+    #mobileTabs{display:flex}
+    .modal{max-height:92vh}
+  }
+
   /* reset + pop-culture modals */
   .chk{display:flex;gap:11px;align-items:flex-start;padding:10px 12px;border:1px solid var(--edge);border-radius:10px;margin-bottom:8px;background:var(--panel-2);cursor:pointer;font-size:13px}
   .chk:hover{border-color:var(--accent)}
@@ -235,18 +279,25 @@
   <button class="topbtn" id="settingsBtn">⚙️ Settings</button>
 </header>
 
+<nav id="mobileTabs" aria-label="Panels">
+  <button data-mp="lyricsPanel" class="active">✏️ Lyrics</button>
+  <button data-mp="suggestPanel">✨ AI</button>
+  <button data-mp="controlsPanel">🧰 Tools</button>
+</nav>
+
 <main>
   <!-- ============ LYRICS (44%) ============ -->
-  <section class="panel" id="lyricsPanel">
+  <section class="panel m-active" id="lyricsPanel">
     <div class="panel-head">
       <span class="ph-title">Lyrics</span>
       <span id="structuredFlag" style="color:var(--good);display:none">● structured</span>
       <div class="spacer"></div>
-      <button class="iconbtn" id="importBtn" title="Import .txt">📥</button>
-      <button class="iconbtn" id="exportBtn" title="Export .txt">📤</button>
-      <button class="iconbtn" id="saveVerBtn" title="Save version (Ctrl+S)">💾</button>
+      <button class="iconbtn" id="importBtn" title="Import .txt" aria-label="Import lyrics from a text file">📥</button>
+      <button class="iconbtn" id="exportBtn" title="Export .txt" aria-label="Export lyrics to a text file">📤</button>
+      <button class="iconbtn" id="saveVerBtn" title="Save version (Ctrl+S)" aria-label="Save a version snapshot">💾</button>
     </div>
     <div class="editor-wrap">
+      <div id="lineHL" aria-hidden="true"></div>
       <div class="gutter" id="gutter"></div>
       <textarea id="editor" spellcheck="true" placeholder="Paste or write your raw lyrics here…
 
@@ -273,9 +324,14 @@ The goal: a better song with the smallest possible changes to your words."></tex
       <span class="ph-title">AI Suggestions</span>
       <span id="suggestTool" style="color:var(--accent)"></span>
       <div class="spacer"></div>
-      <button class="iconbtn" id="copySuggest" title="Copy">⧉</button>
-      <button class="iconbtn" id="popoutBtn" title="Pop out to full screen">⛶</button>
-      <button class="iconbtn" id="clearSuggest" title="Clear">✕</button>
+      <div class="hist-nav" id="histNav" style="display:none">
+        <button class="iconbtn" id="histPrev" aria-label="Show previous result">‹</button>
+        <span id="histPos"></span>
+        <button class="iconbtn" id="histNext" aria-label="Show next result">›</button>
+      </div>
+      <button class="iconbtn" id="copySuggest" title="Copy" aria-label="Copy suggestions to clipboard">⧉</button>
+      <button class="iconbtn" id="popoutBtn" title="Pop out to full screen" aria-label="Open suggestions in full screen">⛶</button>
+      <button class="iconbtn" id="clearSuggest" title="Clear" aria-label="Clear suggestions">✕</button>
     </div>
     <div id="suggestBody">
       <div class="placeholder" id="suggestPlaceholder">
@@ -292,6 +348,14 @@ The goal: a better song with the smallest possible changes to your words."></tex
   <section class="panel" id="controlsPanel">
     <div class="panel-head"><span class="ph-title">Tools</span></div>
     <div id="controlsBody">
+      <div class="ctl-group">
+        <p class="ctl-label">Ask anything</p>
+        <div class="ask-wrap">
+          <input type="text" id="freeAsk" placeholder="e.g. make verse 2 angrier…" aria-label="Custom request for the AI">
+          <button class="btn primary" id="freeAskGo" aria-label="Send custom request">➤</button>
+        </div>
+        <div style="font-size:10.5px;color:var(--ink-faint);margin-top:5px;line-height:1.5">Works on your selection, or the whole song.</div>
+      </div>
       <div class="ctl-group">
         <p class="ctl-label">Enhance</p>
         <div id="toolsEnhance"></div>
@@ -345,11 +409,14 @@ The goal: a better song with the smallest possible changes to your words."></tex
           <button data-p="deepseek">DeepSeek</button>
         </div>
       </label>
-      <label class="field">
+      <label class="field" id="keyField">
         <span class="lbl">API Key</span>
         <input type="password" id="apiKeyInput" placeholder="sk-…" autocomplete="off">
         <span class="hint" id="keyHint"></span>
       </label>
+      <div id="serverModeNote" style="display:none;border:1px solid #274a38;background:#122019;border-radius:9px;padding:10px 12px;font-size:12px;color:#bfe9cf;margin-bottom:15px">
+        🔒 Keys are held by your local server (<code>.env</code>) — nothing is stored in this browser.
+      </div>
       <label class="field">
         <span class="lbl">Model</span>
         <input type="text" id="modelInput" placeholder="model id">
@@ -387,6 +454,7 @@ The goal: a better song with the smallest possible changes to your words."></tex
     </div>
     <div class="modal-foot">
       <button class="btn ghost" id="memoryClear">Clear</button>
+      <button class="btn" id="reIdentity" title="Re-run identity detection on the current lyrics">🪪 Re-detect identity</button>
       <button class="btn primary" id="memorySave">Save memory</button>
     </div>
   </div>
@@ -470,10 +538,15 @@ The goal: a better song with the smallest possible changes to your words."></tex
    Talks to Claude / OpenAI / DeepSeek directly from the browser.
    ========================================================================= */
 const $ = s => document.querySelector(s);
+let _storeWarnedAt=0;
 const store = {
   get:(k,d)=>{try{const v=localStorage.getItem('lyriclab_'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
-  set:(k,v)=>localStorage.setItem('lyriclab_'+k,JSON.stringify(v)),
-  del:k=>localStorage.removeItem('lyriclab_'+k)
+  set:(k,v)=>{try{localStorage.setItem('lyriclab_'+k,JSON.stringify(v))}catch(e){
+    const now=Date.now();
+    if(now-_storeWarnedAt>8000){_storeWarnedAt=now;
+      try{toast('Browser storage is full — changes are NOT being saved. Export your lyrics!',true)}catch(_){alert('Storage full — changes are not being saved. Export your lyrics.')}}
+  }},
+  del:k=>{try{localStorage.removeItem('lyriclab_'+k)}catch(e){}}
 };
 
 /* ---------- Provider config ---------- */
@@ -561,37 +634,117 @@ Your prime directive: make the song BETTER with the SMALLEST possible changes to
 ${ident?`\nSONG IDENTITY (auto-detected from the Initial Analysis — this is the fixed identity of the song; honor it in every suggestion so edits stay true to what the song is):\n${ident}`:''}${brief?`\nWRITER'S BRIEF (from Song Memory — if it conflicts with the identity above, the brief wins):\n${brief}`:''}`;
 }
 
-async function callAI(userContent, {maxTokens=2000}={}){
-  const provider = state.provider;
-  const key = (state.keys[provider]||'').trim();
-  const model = (state.models[provider]||PROVIDERS[provider].defaultModel).trim();
-  if(!key) throw new Error('No API key set for '+PROVIDERS[provider].name);
+/* ---- server mode: a local backend holds the keys and proxies the calls ---- */
+let serverMode=false, serverProviders=[];
+async function detectServer(){
+  if(location.protocol==='file:')return;
+  try{
+    const r=await fetch('api/health',{cache:'no-store'});
+    if(!r.ok)return;
+    const j=await r.json();
+    if(j&&j.ok){
+      serverMode=true; serverProviders=j.providers||[];
+      state.keys={}; store.del('keys');           // keys never live in the browser in server mode
+      if(serverProviders.length&&!serverProviders.includes(state.provider)){
+        state.provider=serverProviders[0]; store.set('provider',state.provider);
+      }
+      refreshProvider();
+      if(serverProviders.length) closeAllIf('settingsOverlay'); // no first-run key ask needed
+    }
+  }catch(e){/* not served by the backend — stay in browser-key mode */}
+}
+function hasCreds(){
+  return serverMode ? serverProviders.includes(state.provider) : !!state.keys[state.provider];
+}
 
-  if(provider==='claude'){
-    const r = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
+/* ---- session token accounting ---- */
+let sessionTokens={in:0,out:0};
+function fmtUsage(u){
+  if(!u||(!u.in&&!u.out))return '';
+  return `<span class="usage-chip" title="Tokens this call (session: ${sessionTokens.in.toLocaleString()} in / ${sessionTokens.out.toLocaleString()} out)">⛁ ${u.in.toLocaleString()} in · ${u.out.toLocaleString()} out</span>`;
+}
+
+/* ---- the AI call: always streams; returns {text, usage} ---- */
+async function callAI(userContent,{maxTokens=2000,onDelta,signal}={}){
+  const provider=state.provider;
+  const model=(state.models[provider]||PROVIDERS[provider].defaultModel).trim();
+  const sys=systemPrompt();
+  let r;
+  if(serverMode){
+    r=await fetch('api/chat',{method:'POST',signal,
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({provider,model,system:sys,user:userContent,maxTokens})});
+  }else if(provider==='claude'){
+    const key=(state.keys.claude||'').trim();
+    if(!key)throw new Error('No API key set for Claude');
+    r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',signal,
       headers:{'content-type':'application/json','x-api-key':key,
         'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model,max_tokens:maxTokens,system:systemPrompt(),
-        messages:[{role:'user',content:userContent}]})
-    });
-    const data = await r.json();
-    if(!r.ok) throw new Error(data.error?.message||('Claude error '+r.status));
-    return (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
+      body:JSON.stringify({model,max_tokens:maxTokens,stream:true,system:sys,
+        messages:[{role:'user',content:userContent}]})});
+  }else{
+    const key=(state.keys[provider]||'').trim();
+    if(!key)throw new Error('No API key set for '+PROVIDERS[provider].name);
+    const base=provider==='openai'?'https://api.openai.com/v1/chat/completions':'https://api.deepseek.com/chat/completions';
+    r=await fetch(base,{method:'POST',signal,
+      headers:{'content-type':'application/json','authorization':'Bearer '+key},
+      body:JSON.stringify({model,max_tokens:maxTokens,stream:true,stream_options:{include_usage:true},
+        messages:[{role:'system',content:sys},{role:'user',content:userContent}]})});
   }
-  // OpenAI + DeepSeek share the chat/completions shape
-  const base = provider==='openai'
-      ? 'https://api.openai.com/v1/chat/completions'
-      : 'https://api.deepseek.com/chat/completions';
-  const r = await fetch(base,{
-    method:'POST',
-    headers:{'content-type':'application/json','authorization':'Bearer '+key},
-    body:JSON.stringify({model,max_tokens:maxTokens,
-      messages:[{role:'system',content:systemPrompt()},{role:'user',content:userContent}]})
-  });
-  const data = await r.json();
-  if(!r.ok) throw new Error(data.error?.message||(PROVIDERS[provider].name+' error '+r.status));
-  return (data.choices?.[0]?.message?.content||'').trim();
+  if(!r.ok){
+    let msg='HTTP '+r.status;
+    try{const j=await r.json();msg=j.error?.message||j.error||msg}catch(e){}
+    throw new Error(msg);
+  }
+  const out=await readAIResponse(r,provider,onDelta);
+  sessionTokens.in+=out.usage.in; sessionTokens.out+=out.usage.out;
+  return out;
+}
+
+/* Parses either an SSE stream (normal path) or a plain JSON body (fallback). */
+async function readAIResponse(resp,provider,onDelta){
+  const ct=(resp.headers.get('content-type')||'');
+  if(ct.includes('application/json')){                 // non-streaming fallback
+    const data=await resp.json();
+    if(provider==='claude'){
+      const text=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
+      const u=data.usage||{};
+      return {text,usage:{in:u.input_tokens||0,out:u.output_tokens||0}};
+    }
+    const u=data.usage||{};
+    return {text:(data.choices?.[0]?.message?.content||'').trim(),
+            usage:{in:u.prompt_tokens||0,out:u.completion_tokens||0}};
+  }
+  // SSE
+  const reader=resp.body.getReader(), dec=new TextDecoder();
+  let buf='',text='',usage={in:0,out:0};
+  const handle=(json)=>{
+    if(provider==='claude'){
+      if(json.type==='error')throw new Error(json.error?.message||'stream error');
+      if(json.type==='message_start')usage.in=json.message?.usage?.input_tokens||0;
+      if(json.type==='content_block_delta'&&json.delta?.type==='text_delta'){text+=json.delta.text;onDelta&&onDelta(json.delta.text,text);}
+      if(json.type==='message_delta'&&json.usage)usage.out=json.usage.output_tokens||usage.out;
+    }else{
+      if(json.usage){usage.in=json.usage.prompt_tokens||usage.in;usage.out=json.usage.completion_tokens||usage.out;}
+      const d=json.choices?.[0]?.delta?.content;
+      if(d){text+=d;onDelta&&onDelta(d,text);}
+    }
+  };
+  while(true){
+    const {done,value}=await reader.read();
+    if(done)break;
+    buf+=dec.decode(value,{stream:true});
+    let nl;
+    while((nl=buf.indexOf('\n'))>=0){
+      const line=buf.slice(0,nl).trim(); buf=buf.slice(nl+1);
+      if(!line.startsWith('data:'))continue;
+      const payload=line.slice(5).trim();
+      if(payload==='[DONE]')continue;
+      try{handle(JSON.parse(payload))}catch(e){if(e instanceof SyntaxError)continue;throw e;}
+    }
+  }
+  return {text:text.trim(),usage};
 }
 
 /* =========================================================================
@@ -636,7 +789,36 @@ function renderMD(src){
    Editor + stats + gutter
    ========================================================================= */
 const editor=$('#editor'),gutter=$('#gutter');
+
+/* ---- CMU pronouncing dictionary (lazy-loaded; heuristic fallback) ---- */
+let cmu=null,cmuLoading=false;
+async function loadCMU(){
+  if(cmu||cmuLoading)return; cmuLoading=true;
+  try{
+    const r=await fetch('https://raw.githubusercontent.com/cmusphinx/cmudict/master/cmudict.dict');
+    if(!r.ok)throw new Error('http '+r.status);
+    const txt=await r.text();
+    const map=new Map();
+    for(let line of txt.split('\n')){
+      if(!line||line[0]===';')continue;
+      const h=line.indexOf(' #'); if(h>=0)line=line.slice(0,h);   // strip inline comments
+      const sp=line.indexOf(' '); if(sp<1)continue;
+      const w=line.slice(0,sp);
+      if(w.includes('('))continue;                                 // skip alternate pronunciations
+      map.set(w.toLowerCase(),line.slice(sp+1).trim());
+    }
+    if(map.size>1000){cmu=map;refreshEditor();toast('🗣 Pronunciation dictionary loaded — exact syllables & rhymes ✓');}
+  }catch(e){/* offline or blocked — heuristic counter keeps working */}
+  finally{cmuLoading=false}
+}
+function cmuPhones(word){
+  if(!cmu)return null;
+  const w=word.toLowerCase();
+  return cmu.get(w)||cmu.get(w.replace(/[^a-z']/g,''))||cmu.get(w.replace(/[^a-z]/g,''))||null;
+}
 function countSyllables(word){
+  const p=cmuPhones(word);
+  if(p)return (p.match(/\d/g)||[]).length||1;
   word=word.toLowerCase().replace(/[^a-z]/g,'');
   if(!word)return 0;
   if(word.length<=3)return 1;
@@ -650,7 +832,24 @@ function lineSyllables(line){
 function rhymeKey(line){
   const words=line.match(/[A-Za-z']+/g);if(!words)return null;
   const w=words[words.length-1].toLowerCase();
+  const p=cmuPhones(w);
+  if(p){ // phones from the last stressed vowel onward = the true rhyme part
+    const ph=p.split(' ');
+    let idx=-1;
+    for(let k=ph.length-1;k>=0;k--)if(/[12]$/.test(ph[k])){idx=k;break}
+    if(idx<0)for(let k=ph.length-1;k>=0;k--)if(/\d$/.test(ph[k])){idx=k;break}
+    if(idx>=0)return ph.slice(idx).join(' ').replace(/\d/g,'');
+  }
   const m=w.match(/[aeiouy][a-z]*$/);return m?m[0]:w.slice(-2);
+}
+
+/* ---- language check: hide syllable/rhyme numbers for non-English lyrics ---- */
+let latinOK=true;
+function detectEnglish(text){
+  const letters=(text.match(/\p{L}/gu)||[]).length;
+  if(letters<20)return true;                       // too little text to judge
+  const nonAscii=(text.match(/[^\x00-\x7F]/g)||[]).length;
+  return nonAscii/letters<0.08;
 }
 function detectRhymeScheme(lines){
   const keys=lines.map(l=>l.trim()?rhymeKey(l):null);
@@ -661,19 +860,24 @@ function detectRhymeScheme(lines){
 function refreshEditor(){
   const text=editor.value;
   const lines=text.split('\n');
+  latinOK=detectEnglish(text);
   gutter.innerHTML=lines.map(l=>{
     if(l.trim()==='')return '&nbsp;';
     if(/^\s*\[.*\]\s*$/.test(l))return '<span style="color:var(--warn)">§</span>';
-    return `<span class="syl">${lineSyllables(l)}</span>`;
+    return latinOK?`<span class="syl">${lineSyllables(l)}</span>`:'<span class="syl">·</span>';
   }).join('\n');
-  const words=(text.match(/[A-Za-z']+/g)||[]).length;
-  const syl=lines.reduce((n,l)=>n+lineSyllables(l),0);
+  const words=(text.match(/\p{L}[\p{L}']*/gu)||[]).length;
   const nonEmpty=lines.filter(l=>l.trim()&&!/^\s*\[.*\]\s*$/.test(l));
   $('#statLines').textContent=nonEmpty.length;
   $('#statWords').textContent=words;
-  $('#statSyl').textContent=syl;
-  $('#statRhyme').textContent=nonEmpty.length?detectRhymeScheme(nonEmpty.slice(0,8)):'—';
-  $('#statEcho').textContent=topEcho(nonEmpty.join(' '));
+  if(latinOK){
+    $('#statSyl').textContent=lines.reduce((n,l)=>n+lineSyllables(l),0);
+    $('#statRhyme').textContent=nonEmpty.length?detectRhymeScheme(nonEmpty.slice(0,8)):'—';
+  }else{
+    $('#statSyl').textContent='—';
+    $('#statRhyme').textContent='—';
+  }
+  $('#statEcho').textContent=latinOK?topEcho(nonEmpty.join(' ')):'—';
 }
 const ECHO_STOP=new Set(('the and that with this your from have just like what when they been will were into over then them there their because about would could should never always every gonna wanna cant dont aint youre theyre weve youve thats').split(' '));
 function topEcho(text){
@@ -699,9 +903,30 @@ editor.addEventListener('scroll',()=>{gutter.scrollTop=editor.scrollTop});
    Suggestions panel
    ========================================================================= */
 let lastResult={title:'',html:'',raw:''};
-let lastEdits=[];        // structured edits from the last tool run
-let currentTarget=null;  // the {scope,lineFrom,lineTo,...} the last tool ran on
+let lastEdits=[];        // structured edits of the entry being viewed
+let currentTarget=null;  // the {scope,lineFrom,lineTo,...} of the entry being viewed
+let currentAbort=null;   // AbortController of the in-flight AI request
 const PLACEHOLDER=document.querySelector('#suggestPlaceholder').outerHTML;
+
+/* ---- result history: keep the last 3 suggestion sets ---- */
+let suggestHistory=store.get('suggestHistory',[]);   // [{label,md,edits,tgt,usage,ts}]
+let histIndex=suggestHistory.length-1;
+function pushHistory(entry){
+  suggestHistory.push(entry);
+  suggestHistory=suggestHistory.slice(-3);
+  histIndex=suggestHistory.length-1;
+  store.set('suggestHistory',suggestHistory);
+}
+function refreshHistNav(){
+  const nav=$('#histNav');
+  if(suggestHistory.length<1){nav.style.display='none';return;}
+  nav.style.display='flex';
+  $('#histPos').textContent=(histIndex+1)+'/'+suggestHistory.length;
+  $('#histPrev').disabled=histIndex<=0;
+  $('#histNext').disabled=histIndex>=suggestHistory.length-1;
+}
+$('#histPrev').onclick=()=>{if(histIndex>0){histIndex--;renderEntry(suggestHistory[histIndex]);}};
+$('#histNext').onclick=()=>{if(histIndex<suggestHistory.length-1){histIndex++;renderEntry(suggestHistory[histIndex]);}};
 
 /* ---- work out what the tool should operate on: the selection, else whole song ---- */
 function getTarget(){
@@ -723,11 +948,27 @@ function scopeChip(tgt){
     : `<span class="scope-chip">◎ Whole song</span>`;
 }
 
-function buildToolPrompt(t,tgt,hint){
+/* measured syllable counts / rhyme keys for the meter & rhyme tools */
+function measuredData(toolId,tgt){
+  if(!latinOK)return '';
+  if(toolId!=='syllables'&&toolId!=='rhymes')return '';
+  const lines=tgt.sel.split('\n');
+  const rows=[];
+  lines.forEach((l,i)=>{
+    if(!l.trim()||/^\s*\[.*\]\s*$/.test(l))return;
+    let row=`${lineSyllables(l)} syl`;
+    if(toolId==='rhymes'){const k=rhymeKey(l);if(k)row+=` · ends /${k}/`;}
+    rows.push(`  ${row}  | ${l.trim()}`);
+  });
+  if(!rows.length)return '';
+  return `\nMEASURED DATA (${cmu?'CMU pronouncing dictionary':'heuristic count'} — trust these numbers over your own counting):\n${rows.join('\n')}\n`;
+}
+
+function buildToolPrompt(t,tgt,hint,toolId){
   const onSel = tgt.scope==='selection';
   return `YOUR ROLE for this task: you are ${t.role}
 TASK: ${t.prompt}
-${hint?`\nUSER FOCUS: the writer wants this steered toward: "${hint}". Honor it.\n`:''}
+${hint?`\nUSER FOCUS: the writer wants this steered toward: "${hint}". Honor it.\n`:''}${measuredData(toolId,tgt)}
 SCOPE: ${onSel
   ? `Operate ONLY on the TARGET LINES below (lines ${tgt.lineFrom}–${tgt.lineTo} of the song). Every edit's "original" must be copied verbatim from the TARGET LINES. Use the FULL SONG only as context.`
   : `Operate on the whole song below.`}
@@ -745,20 +986,36 @@ ${onSel?`TARGET LINES (edit these):\n"""\n${tgt.sel}\n"""\n\nFULL SONG (context 
        :`SONG:\n"""\n${tgt.full}\n"""`}`;
 }
 
-function showThinking(label,tgt){
+/* streaming view: live text + a Stop button that aborts the request */
+function startStream(label,tgt,note){
   $('#suggestTool').textContent=label;
   $('#suggestBody').innerHTML=`<div class="tool-tag">${label}</div>${scopeChip(tgt)}
-    <div class="thinking"><div class="spinner"></div>Thinking with ${PROVIDERS[state.provider].name}…</div>`;
+    <div class="stream-head"><div class="spinner"></div>
+      <span style="color:var(--ink-dim);font-size:12px;flex:1">${note||('Streaming from '+PROVIDERS[state.provider].name+'…')}</span>
+      <button class="stop-btn" id="stopBtn" aria-label="Stop the AI request">■ Stop</button></div>
+    <div class="streambox" id="streamBox"><span class="cursor"></span></div>`;
+  $('#stopBtn').onclick=()=>{currentAbort&&currentAbort.abort();};
+  return (delta,full)=>{
+    const box=$('#streamBox'); if(!box)return;
+    box.innerHTML=esc(full)+'<span class="cursor"></span>';
+    box.scrollTop=box.scrollHeight;
+  };
 }
-function showError(msg){
-  $('#suggestBody').innerHTML=`<div class="md"><blockquote><strong style="color:var(--bad)">Couldn't reach the AI.</strong><br>${esc(msg)}</blockquote><p style="color:var(--ink-dim)">Check your key &amp; model in ⚙️ Settings. For Claude, browser access needs a key that permits direct browser calls.</p></div>`;
+function showError(msg,stopped){
+  $('#suggestBody').innerHTML=stopped
+    ? `<div class="md"><blockquote>■ Stopped.</blockquote></div>`
+    : `<div class="md"><blockquote><strong style="color:var(--bad)">Couldn't reach the AI.</strong><br>${esc(msg)}</blockquote><p style="color:var(--ink-dim)">Check your key &amp; model in ⚙️ Settings. For Claude, browser access needs a key that permits direct browser calls.</p></div>`;
+  refreshHistNav();
 }
 function parseEdits(md){
   const m=md.match(/```json\s*\n([\s\S]*?)```/i);
-  if(!m) return {edits:[],rest:md.trim()};
-  let edits=[];
-  try{const p=JSON.parse(m[1]); if(Array.isArray(p)) edits=p;}catch(e){}
-  return {edits, rest:md.replace(m[0],'').trim()};
+  if(!m) return {edits:[],rest:md.trim(),ok:false};
+  try{
+    const p=JSON.parse(m[1]);
+    return {edits:Array.isArray(p)?p:[], rest:md.replace(m[0],'').trim(), ok:true};
+  }catch(e){
+    return {edits:[], rest:md.replace(m[0],'').trim(), ok:false};
+  }
 }
 function editCard(ed,i){
   const isAdd=!ed.original||!(''+ed.original).trim();
@@ -773,17 +1030,22 @@ function editCard(ed,i){
       <button class="sg-btn copy">⧉ Copy</button>
     </div></div>`;
 }
-function renderToolResult(label,md,tgt){
-  const {edits,rest}=parseEdits(md);
-  lastEdits=edits;
-  const cards=edits.length
-      ? `<div class="sg-list"><div class="sg-hd">Suggestions — apply inline</div>${edits.map(editCard).join('')}</div>`
-      : `<p style="color:var(--ink-faint)">No line changes suggested for this scope.</p>`;
-  const analysis=rest?`<div class="md">${renderMD(rest)}</div>`:'';
-  const inner=`<div class="tool-tag">${label}</div>${scopeChip(tgt)}${cards}${analysis}`;
+function renderEntry(entry){
+  lastEdits=entry.edits||[];
+  currentTarget=entry.tgt||null;
+  const banner=entry.jsonOk===false
+    ? `<div class="warn-banner">⚠️ The AI didn't return valid edit cards this time (malformed JSON, even after a retry) — showing its analysis text only. Run the tool again for applicable cards.</div>`
+    : '';
+  const cards=lastEdits.length
+      ? `<div class="sg-list"><div class="sg-hd">Suggestions — hover to preview, apply inline</div>${lastEdits.map(editCard).join('')}</div>`
+      : (entry.jsonOk===false?'':`<p style="color:var(--ink-faint)">No line changes suggested for this scope.</p>`);
+  const analysis=entry.rest?`<div class="md">${renderMD(entry.rest)}</div>`:'';
+  const inner=`<div class="tool-tag">${entry.label}</div>${scopeChip(entry.tgt)}${fmtUsage(entry.usage)}${banner}${cards}${analysis}`;
   $('#suggestBody').innerHTML=inner;
-  lastResult={title:label,html:inner,raw:md};
+  $('#suggestTool').textContent=entry.label;
+  lastResult={title:entry.label,html:inner,raw:entry.md};
   wireCards($('#suggestBody'));
+  refreshHistNav();
 }
 function wireCards(root){
   root.querySelectorAll('.sg').forEach(card=>{
@@ -793,28 +1055,110 @@ function wireCards(root){
     b('.both')&& (b('.both').onclick=()=>applyEdit(card,ed,'both'));
     b('.ins') && (b('.ins').onclick=()=>applyEdit(card,ed,'insert'));
     b('.copy').onclick=()=>{navigator.clipboard.writeText(ed.suggested||'');toast('Copied ✓')};
+    card.addEventListener('mouseenter',()=>previewEdit(ed));
+    card.addEventListener('mouseleave',hideLineHL);
   });
+}
+
+/* ---- locating lines: prefer the tool's target range, then the whole song ---- */
+function findEditLine(lines,orig){
+  const t=orig.trim(), tgt=currentTarget;
+  if(tgt&&tgt.scope==='selection'){
+    const hi=Math.min(tgt.lineTo-1,lines.length-1);
+    for(let i=Math.max(0,tgt.lineFrom-1);i<=hi;i++)
+      if(lines[i]!=null&&lines[i].trim()===t)return i;
+  }
+  return lines.findIndex(l=>l.trim()===t);
+}
+/* recompute the insert spot at APPLY time (lines may have shifted since the run) */
+function insertAnchor(lines){
+  const tgt=currentTarget;
+  if(tgt&&tgt.scope==='selection'&&tgt.sel){
+    const selLines=tgt.sel.split('\n').map(s=>s.trim()).filter(Boolean);
+    for(let j=selLines.length-1;j>=0;j--){
+      const i=lines.findIndex(l=>l.trim()===selLines[j]);
+      if(i>=0)return i+1;
+    }
+  }
+  return lines.length;
+}
+function lineCharRange(lines,idx){
+  let start=0;
+  for(let i=0;i<idx;i++)start+=lines[i].length+1;
+  return [start,start+lines[idx].length];
+}
+/* undo-preserving text mutation: goes through the browser's edit stack */
+function editText(start,end,text){
+  editor.focus();
+  editor.setSelectionRange(start,end);
+  let done=false;
+  try{done=document.execCommand('insertText',false,text)}catch(e){}
+  if(!done){ // very old/locked-down browsers: fall back (undo not preserved)
+    editor.setRangeText(text,start,end,'end');
+    editor.dispatchEvent(new Event('input',{bubbles:true}));
+  }
 }
 function applyEdit(card,ed,mode){
   const orig=(''+(ed.original||'')).trim(), sug=(''+(ed.suggested||'')).trim();
   if(!sug){toast('Nothing to apply',true);return;}
   snapshot('before AI edit');
-  let lines=editor.value.split('\n');
+  const lines=editor.value.split('\n');
+  let hlIdx;
   if(mode==='insert'){
-    const at=(currentTarget&&currentTarget.scope==='selection')?currentTarget.lineTo:lines.length;
-    lines.splice(at,0,sug);
+    const at=insertAnchor(lines);
+    hlIdx=at;
+    if(at>=lines.length){
+      const v=editor.value;
+      editText(v.length,v.length,(v===''||v.endsWith('\n'))?sug:'\n'+sug);
+    }else{
+      const [s]=lineCharRange(lines,at);
+      editText(s,s,sug+'\n');
+    }
   }else{
-    let idx=lines.findIndex(l=>l.trim()===orig);
+    const idx=findEditLine(lines,orig);
     if(idx<0){toast('Original line not found — copy it in manually',true);return;}
     const indent=lines[idx].match(/^\s*/)[0];
-    if(mode==='replace') lines[idx]=indent+sug;
-    else lines.splice(idx+1,0,indent+sug);   // keep both
+    const [s,e]=lineCharRange(lines,idx);
+    if(mode==='replace'){editText(s,e,indent+sug);hlIdx=idx;}
+    else{editText(e,e,'\n'+indent+sug);hlIdx=idx+1;}
   }
-  const val=lines.join('\n');
-  editor.value=val; refreshEditor(); store.set('lyrics',val);
+  store.set('lyrics',editor.value);
   markApplied(card,mode);
-  toast(mode==='replace'?'Replaced ✓':mode==='both'?'Added below ✓':'Inserted ✓');
+  flashLineHL(hlIdx);
+  toast(mode==='replace'?'Replaced ✓ (Ctrl+Z undoes)':mode==='both'?'Added below ✓':'Inserted ✓');
 }
+
+/* ---- editor line highlight (preview + post-apply flash) ---- */
+function editorLineHeight(){return parseFloat(getComputedStyle(editor).lineHeight)||24}
+function showLineHL(idx){
+  const lh=editorLineHeight(), padTop=14;
+  const y=idx*lh;
+  if(y<editor.scrollTop||y>editor.scrollTop+editor.clientHeight-lh){
+    editor.scrollTop=Math.max(0,y-editor.clientHeight/2);
+    gutter.scrollTop=editor.scrollTop;
+  }
+  const top=padTop+y-editor.scrollTop;
+  const hl=$('#lineHL');
+  hl.style.left=gutter.offsetWidth+'px';
+  hl.style.top=top+'px';
+  hl.style.height=lh+'px';
+  hl.style.display='block';
+}
+function hideLineHL(){$('#lineHL').style.display='none'}
+function previewEdit(ed){
+  const lines=editor.value.split('\n');
+  const orig=(''+(ed.original||'')).trim();
+  let idx;
+  if(orig){idx=findEditLine(lines,orig);if(idx<0){hideLineHL();return;}}
+  else{idx=Math.max(0,insertAnchor(lines)-1);}
+  showLineHL(idx);
+}
+function flashLineHL(idx){
+  if(idx==null)return;
+  showLineHL(idx);
+  setTimeout(hideLineHL,1200);
+}
+editor.addEventListener('scroll',hideLineHL);
 function markApplied(card,mode){
   card.classList.add('applied');
   card.querySelectorAll('.sg-btn').forEach(b=>{if(!b.classList.contains('copy'))b.disabled=true});
@@ -823,20 +1167,56 @@ function markApplied(card,mode){
   card.querySelector('.sg-actions').appendChild(tag);
 }
 
-async function runTool(id,hint){
-  if(!state.keys[state.provider]){openSettings();return;}
-  if(id==='popculture' && hint===undefined){openPopCulture();return;} // ask for an optional steer first
-  const t=TOOLS[id];
+const JSON_RETRY_NOTE=`\n\nREMINDER: your previous reply's json block was missing or unparseable. Reply again in full, and END with exactly one valid \`\`\`json fenced block (an array of {"original","suggested","why"} objects, or []). No comments or trailing commas inside it.`;
+
+async function runToolObj(t,toolId,hint){
+  if(!hasCreds()){openSettings();return;}
   const tgt=getTarget();
-  currentTarget=tgt;
   if(!tgt.full.trim()){toast('Add some lyrics first',true);return;}
   if(tgt.scope==='selection' && !tgt.sel.trim()){toast('Select some lyric lines, or clear the selection to use the whole song',true);return;}
-  showThinking(t.label,tgt);
+  currentTarget=tgt;
+  currentAbort&&currentAbort.abort();
+  currentAbort=new AbortController();
+  const signal=currentAbort.signal;
+  const basePrompt=buildToolPrompt(t,tgt,hint,toolId);
+  const onDelta=startStream(t.label,tgt);
+  mobileShow('suggestPanel');
   try{
-    const md=await callAI(buildToolPrompt(t,tgt,hint),{maxTokens:2200});
-    renderToolResult(t.label, md||'*No response.*', tgt);
-  }catch(e){showError(e.message)}
+    let {text:md,usage}=await callAI(basePrompt,{maxTokens:2200,onDelta,signal});
+    let parsed=parseEdits(md||'');
+    if(!parsed.ok){  // bad or missing JSON → retry once with a stern reminder
+      const retryDelta=startStream(t.label,tgt,'Response had no valid edits — retrying once…');
+      const second=await callAI(basePrompt+JSON_RETRY_NOTE,{maxTokens:2200,onDelta:retryDelta,signal});
+      usage={in:usage.in+second.usage.in,out:usage.out+second.usage.out};
+      const p2=parseEdits(second.text||'');
+      if(p2.ok){md=second.text;parsed=p2;}
+      else parsed={...parsed,rest:parsed.rest||esc(md||'*No response.*')}; // still bad → keep first analysis, flag it
+    }
+    const entry={label:t.label,md,edits:parsed.edits,rest:parsed.rest,jsonOk:parsed.ok,tgt,usage,ts:Date.now()};
+    pushHistory(entry);
+    renderEntry(entry);
+  }catch(e){
+    if(e.name==='AbortError'){showError('',true);}
+    else showError(e.message);
+  }finally{currentAbort=null;}
 }
+function runTool(id,hint){
+  if(id==='popculture' && hint===undefined){openPopCulture();return;} // ask for an optional steer first
+  runToolObj(TOOLS[id],id,hint);
+}
+
+/* ---- free-text custom requests ---- */
+function runFreeText(){
+  const q=$('#freeAsk').value.trim();
+  if(!q){toast('Type what you want the co-writer to do',true);$('#freeAsk').focus();return;}
+  runToolObj({
+    label:'Custom: '+(q.length>26?q.slice(0,24)+'…':q),
+    role:`the versatile CO-WRITER — you do exactly what the writer asks, expertly, in their voice.`,
+    prompt:q
+  },'custom');
+}
+$('#freeAskGo').onclick=runFreeText;
+$('#freeAsk').addEventListener('keydown',e=>{if(e.key==='Enter')runFreeText()});
 
 /* ---- pop culture finder modal ---- */
 function openPopCulture(){
@@ -844,8 +1224,7 @@ function openPopCulture(){
   $('#pcScope').textContent = tgt.scope==='selection'
     ? `selected lines ${tgt.lineFrom}–${tgt.lineTo}` : 'whole song';
   $('#pcHint').value = store.get('pcHint','');
-  $('#pcOverlay').classList.add('show');
-  $('#pcHint').focus();
+  showOverlay($('#pcOverlay'));
 }
 $('#pcRun').onclick=()=>{
   const hint=$('#pcHint').value.trim();
@@ -857,7 +1236,7 @@ $('#pcClose').onclick=closeAll;$('#pcCancel').onclick=closeAll;
 $('#pcHint').addEventListener('keydown',e=>{if(e.key==='Enter')$('#pcRun').click()});
 
 /* ---- new song / reset ---- */
-function openReset(){$('#resetOverlay').classList.add('show')}
+function openReset(){showOverlay($('#resetOverlay'))}
 $('#resetGo').onclick=()=>{
   const clr={
     lyrics:$('#rsLyrics').checked, identity:$('#rsIdentity').checked,
@@ -871,6 +1250,7 @@ $('#resetGo').onclick=()=>{
   state.analyzed=false;store.set('analyzed',false);
   $('#structuredFlag').style.display='none';
   lastEdits=[];lastResult={title:'',html:'',raw:''};currentTarget=null;
+  suggestHistory=[];histIndex=-1;store.set('suggestHistory',[]);refreshHistNav();
   $('#suggestBody').innerHTML=PLACEHOLDER;$('#suggestTool').textContent='';
   closeAll();toast('Fresh canvas — ready for a new song ✓');
 };
@@ -880,29 +1260,64 @@ $('#resetClose').onclick=closeAll;$('#resetCancel').onclick=closeAll;
 /* =========================================================================
    Initial Analysis (structuring)
    ========================================================================= */
-async function runInitialAnalysis(){
-  if(!state.keys[state.provider]){openSettings();return;}
-  const text=editor.value.trim();
-  if(!text){toast('Paste your raw song first',true);return;}
-  openPop('✨ Initial Analysis',`<div class="thinking"><div class="spinner"></div>Structuring your song with ${PROVIDERS[state.provider].name}…</div>`);
-  const instruction=`You are LyricLab's song analyst. This is a RAW, possibly unstructured song. Do THREE things, in this order:
-
-1. Restructure it into a clean, properly labeled song using section headers like [Intro], [Verse 1], [Pre-Chorus], [Chorus], [Verse 2], [Bridge], [Outro] as appropriate. Keep the writer's ACTUAL words — only reorganize, label sections, and fix obvious line breaks. Do NOT rewrite the lyrics. Return this structured version inside a fenced code block that starts with \`\`\`lyrics and ends with \`\`\`.
-
-2. Then output the song's IDENTITY as a fenced \`\`\`json block with EXACTLY these keys, each a short string:
+const IDENTITY_JSON_SPEC=`a fenced \`\`\`json block with EXACTLY these keys, each a short string:
    {"title":"","genre":"","mood":"","pov":"","theme":"","rhymeScheme":"","imagery":"","summary":""}
    - title: a fitting working title (invent one if none is obvious)
    - pov: e.g. "1st person", "direct address (you)"
    - imagery: the 2-4 signature images/motifs, comma-separated
-   - summary: the whole song in one sentence
+   - summary: the whole song in one sentence`;
+
+async function runInitialAnalysis(){
+  if(!hasCreds()){openSettings();return;}
+  const text=editor.value.trim();
+  if(!text){toast('Paste your raw song first',true);return;}
+  currentAbort&&currentAbort.abort();
+  currentAbort=new AbortController();
+  openPop('✨ Initial Analysis',
+    `<div class="stream-head"><div class="spinner"></div>
+       <span style="color:var(--ink-dim);font-size:12px;flex:1">Structuring your song with ${PROVIDERS[state.provider].name}…</span>
+       <button class="stop-btn" id="popStopBtn" aria-label="Stop the analysis">■ Stop</button></div>
+     <div class="streambox" id="popStreamBox"><span class="cursor"></span></div>`);
+  $('#popStopBtn').onclick=()=>{currentAbort&&currentAbort.abort();};
+  const instruction=`You are LyricLab's song analyst. This is a RAW, possibly unstructured song. Do THREE things, in this order:
+
+1. Restructure it into a clean, properly labeled song using section headers like [Intro], [Verse 1], [Pre-Chorus], [Chorus], [Verse 2], [Bridge], [Outro] as appropriate. Keep the writer's ACTUAL words — only reorganize, label sections, and fix obvious line breaks. Do NOT rewrite the lyrics. Return this structured version inside a fenced code block that starts with \`\`\`lyrics and ends with \`\`\`.
+
+2. Then output the song's IDENTITY as ${IDENTITY_JSON_SPEC}
    This identity is the song's permanent creative fingerprint and will guide every later edit — make it accurate.
 
 3. After that, give a short **Analysis** in Markdown: the sections you found, plus 2-3 things working and 2-3 opportunities.`;
+  const onDelta=(d,full)=>{const box=$('#popStreamBox');if(box){box.innerHTML=esc(full)+'<span class="cursor"></span>';box.scrollTop=box.scrollHeight;}};
   try{
-    const md=await callAI(`${instruction}\n\nRAW SONG:\n"""\n${text}\n"""`,{maxTokens:2600});
+    const {text:md,usage}=await callAI(`${instruction}\n\nRAW SONG:\n"""\n${text}\n"""`,
+      {maxTokens:2600,onDelta,signal:currentAbort.signal});
     renderAnalysis(md);
-  }catch(e){$('#popBody').innerHTML=`<div class="md"><blockquote><strong style="color:var(--bad)">Analysis failed.</strong><br>${esc(e.message)}</blockquote></div>`}
+    if(usage&&(usage.in||usage.out))
+      $('#popBody').insertAdjacentHTML('beforeend',`<div style="margin-top:12px;text-align:right">${fmtUsage(usage)}</div>`);
+  }catch(e){
+    $('#popBody').innerHTML = e.name==='AbortError'
+      ? `<div class="md"><blockquote>■ Stopped.</blockquote></div>`
+      : `<div class="md"><blockquote><strong style="color:var(--bad)">Analysis failed.</strong><br>${esc(e.message)}</blockquote></div>`;
+  }finally{currentAbort=null;}
 }
+
+/* ---- re-detect identity without a full analysis / reset ---- */
+$('#reIdentity').onclick=async()=>{
+  if(!hasCreds()){openSettings();return;}
+  const text=editor.value.trim();
+  if(!text){toast('No lyrics to analyze',true);return;}
+  const btn=$('#reIdentity');btn.disabled=true;btn.textContent='Detecting…';
+  currentAbort&&currentAbort.abort();currentAbort=new AbortController();
+  try{
+    const {text:md}=await callAI(
+      `Extract this song's IDENTITY as ${IDENTITY_JSON_SPEC}\nOutput ONLY the json block, nothing else.\n\nSONG:\n"""\n${text}\n"""`,
+      {maxTokens:500,signal:currentAbort.signal});
+    const id=captureIdentity(md);
+    if(id){fillMemoryFields();toast('Song identity updated ✓');}
+    else toast('Could not detect an identity from that response',true);
+  }catch(e){if(e.name!=='AbortError')toast('Failed: '+e.message,true);}
+  finally{currentAbort=null;btn.disabled=false;btn.textContent='🪪 Re-detect identity';}
+};
 function extractLyricsBlock(md){
   const m=md.match(/```(?:lyrics)?\s*\n([\s\S]*?)```/i);
   return m?m[1].replace(/\s+$/,''):null;
@@ -996,15 +1411,39 @@ function renderVersions(){
    Modals & UI wiring
    ========================================================================= */
 function toast(msg,err){const t=$('#toast');t.textContent=msg;t.className='toast show'+(err?' err':'');setTimeout(()=>t.className='toast',2200);}
-function closeAll(){document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('show'))}
-function openPop(title,html){$('#popTitle').textContent=title;$('#popBody').innerHTML=html;$('#popOverlay').classList.add('show')}
-function closePop(){$('#popOverlay').classList.remove('show')}
+
+/* ---- modal a11y: focus moves in, stays trapped inside, and returns on close ---- */
+let _lastFocused=null;
+function showOverlay(el){
+  _lastFocused=document.activeElement;
+  el.classList.add('show');
+  const f=el.querySelector('input:not([type=hidden]),textarea,select')||el.querySelector('.modal-foot button')||el.querySelector('button');
+  f&&f.focus();
+}
+function closeAll(){
+  document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('show'));
+  if(_lastFocused&&document.contains(_lastFocused)&&_lastFocused.focus)_lastFocused.focus();
+  _lastFocused=null;
+}
+function closeAllIf(id){const el=document.getElementById(id);if(el&&el.classList.contains('show'))closeAll();}
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Tab')return;
+  const ov=document.querySelector('.overlay.show'); if(!ov)return;
+  const f=[...ov.querySelectorAll('button,input,textarea,select,[tabindex]')].filter(x=>!x.disabled&&x.offsetParent);
+  if(!f.length)return;
+  const first=f[0],last=f[f.length-1];
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+});
+
+function openPop(title,html){$('#popTitle').textContent=title;$('#popBody').innerHTML=html;showOverlay($('#popOverlay'))}
+function closePop(){closeAll()}
 
 /* provider indicator */
 function refreshProvider(){
   const p=PROVIDERS[state.provider];
-  $('#provName').textContent=p.name;
-  const ok=!!state.keys[state.provider];
+  $('#provName').textContent=p.name+(serverMode?' (server)':'');
+  const ok=serverMode?serverProviders.includes(state.provider):!!state.keys[state.provider];
   $('#provStatus').className='status'+(ok?' ok':'');
 }
 
@@ -1012,12 +1451,21 @@ function refreshProvider(){
 let segProvider=state.provider;
 function openSettings(){
   segProvider=state.provider;
-  paintSeg();$('#settingsOverlay').classList.add('show');
-  $('#settingsTitle').textContent=state.keys[state.provider]?'Settings':'Connect an AI engine';
+  paintSeg();showOverlay($('#settingsOverlay'));
+  $('#settingsTitle').textContent=hasCreds()?'Settings':'Connect an AI engine';
 }
 function paintSeg(){
-  document.querySelectorAll('#providerSeg button').forEach(b=>b.classList.toggle('active',b.dataset.p===segProvider));
+  document.querySelectorAll('#providerSeg button').forEach(b=>{
+    b.classList.toggle('active',b.dataset.p===segProvider);
+    b.style.opacity=(serverMode&&!serverProviders.includes(b.dataset.p))?'.4':'';
+    b.title=(serverMode&&!serverProviders.includes(b.dataset.p))?'No key on the server for this provider':'';
+  });
   const p=PROVIDERS[segProvider];
+  $('#keyField').style.display=serverMode?'none':'';
+  $('#serverModeNote').style.display=serverMode?'':'none';
+  $('#settingsIntro').textContent=serverMode
+    ? 'This LyricLab is served by your local backend — API keys live in its .env file, not in the browser.'
+    : 'LyricLab talks directly to your chosen provider from this browser — your key is stored only in this browser’s local storage and never sent anywhere else.';
   $('#apiKeyInput').value=state.keys[segProvider]||'';
   $('#modelInput').value=state.models[segProvider]||p.defaultModel;
   $('#keyHint').textContent=p.keyHint;
@@ -1026,18 +1474,25 @@ function paintSeg(){
 document.querySelectorAll('#providerSeg button').forEach(b=>b.onclick=()=>{segProvider=b.dataset.p;paintSeg()});
 $('#saveKeyBtn').onclick=()=>{
   const key=$('#apiKeyInput').value.trim();
-  if(!key){toast('Enter an API key',true);return;}
-  state.keys[segProvider]=key;
+  if(!serverMode){
+    if(!key){toast('Enter an API key',true);return;}
+    state.keys[segProvider]=key;
+    store.set('keys',state.keys);
+  }else if(!serverProviders.includes(segProvider)){
+    toast('The server has no key for '+PROVIDERS[segProvider].name+' — add it to .env',true);return;
+  }
   state.models[segProvider]=$('#modelInput').value.trim()||PROVIDERS[segProvider].defaultModel;
   state.provider=segProvider;
-  store.set('keys',state.keys);store.set('models',state.models);store.set('provider',state.provider);
+  store.set('models',state.models);store.set('provider',state.provider);
   refreshProvider();closeAll();toast('Connected to '+PROVIDERS[segProvider].name+' ✓');
 };
 $('#testKeyBtn').onclick=async()=>{
   const key=$('#apiKeyInput').value.trim();
-  if(!key){toast('Enter a key to test',true);return;}
+  if(!serverMode&&!key){toast('Enter a key to test',true);return;}
   const prevP=state.provider,prevK=state.keys[segProvider],prevM=state.models[segProvider];
-  state.provider=segProvider;state.keys[segProvider]=key;state.models[segProvider]=$('#modelInput').value.trim()||PROVIDERS[segProvider].defaultModel;
+  state.provider=segProvider;
+  if(!serverMode)state.keys[segProvider]=key;
+  state.models[segProvider]=$('#modelInput').value.trim()||PROVIDERS[segProvider].defaultModel;
   const btn=$('#testKeyBtn');btn.textContent='Testing…';btn.disabled=true;
   try{await callAI('Reply with just the word: OK',{maxTokens:10});toast('Connection works ✓');}
   catch(e){toast('Failed: '+e.message,true);state.keys[segProvider]=prevK;state.models[segProvider]=prevM;}
@@ -1045,11 +1500,14 @@ $('#testKeyBtn').onclick=async()=>{
 };
 
 /* memory modal */
-function openMemory(){
-  const m=state.memory;
+function fillMemoryFields(){
+  const m=state.memory||{};
   $('#memTitle').value=m.title||'';$('#memGenre').value=m.genre||'';$('#memMood').value=m.mood||'';
   $('#memPOV').value=m.pov||'';$('#memTheme').value=m.theme||'';$('#memNotes').value=m.notes||'';
-  $('#memoryOverlay').classList.add('show');
+}
+function openMemory(){
+  fillMemoryFields();
+  showOverlay($('#memoryOverlay'));
 }
 $('#memorySave').onclick=()=>{
   state.memory={title:$('#memTitle').value,genre:$('#memGenre').value,mood:$('#memMood').value,
@@ -1059,7 +1517,7 @@ $('#memorySave').onclick=()=>{
 $('#memoryClear').onclick=()=>{['#memTitle','#memGenre','#memMood','#memPOV','#memTheme','#memNotes'].forEach(s=>$(s).value='')};
 
 /* versions modal */
-function openVersions(){renderVersions();$('#versionsOverlay').classList.add('show')}
+function openVersions(){renderVersions();showOverlay($('#versionsOverlay'))}
 $('#snapNow').onclick=()=>{snapshot('manual snapshot');renderVersions();toast('Snapshot saved ✓')};
 $('#clearVersions').onclick=()=>{if(confirm('Delete all snapshots?')){state.versions=[];store.set('versions',[]);renderVersions();}};
 
@@ -1091,7 +1549,7 @@ $('#popClose').onclick=closePop;
 $('#exportBtn').onclick=exportTxt;$('#exportBtn2').onclick=exportTxt;
 $('#importBtn').onclick=importTxt;$('#importBtn2').onclick=importTxt;
 $('#saveVerBtn').onclick=()=>{snapshot('manual save');toast('Version saved ✓')};
-document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('mousedown',e=>{if(e.target===o)o.classList.remove('show')}));
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('mousedown',e=>{if(e.target===o)closeAll()}));
 
 /* build tool rail */
 const TOOL_GROUPS={
@@ -1111,12 +1569,31 @@ document.addEventListener('keydown',e=>{
 });
 
 /* =========================================================================
+   Mobile tabs
+   ========================================================================= */
+const isMobile=()=>window.matchMedia('(max-width:860px)').matches;
+function mobileShow(id){
+  if(!isMobile())return;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('m-active',p.id===id));
+  document.querySelectorAll('#mobileTabs button').forEach(b=>b.classList.toggle('active',b.dataset.mp===id));
+}
+document.querySelectorAll('#mobileTabs button').forEach(b=>b.onclick=()=>mobileShow(b.dataset.mp));
+
+/* =========================================================================
    Boot
    ========================================================================= */
 editor.value=store.get('lyrics','');
 refreshEditor();refreshProvider();
+refreshHistNav();
+if(suggestHistory.length)renderEntry(suggestHistory[histIndex]);  // restore the recent result sets
 if(state.analyzed)$('#structuredFlag').style.display='';
-if(!state.keys[state.provider]) openSettings();  // first-run: ask for key immediately
+// a11y: label every ✕ close button
+document.querySelectorAll('.overlay .iconbtn').forEach(b=>{
+  if(b.textContent.trim()==='✕'&&!b.getAttribute('aria-label'))b.setAttribute('aria-label','Close dialog');
+});
+detectServer();                                   // served by the backend? use its keys
+setTimeout(loadCMU,1200);                         // pronunciation dictionary, in the background
+if(!hasCreds()) openSettings();                   // first-run: ask for key immediately (server mode closes it)
 </script>
 </body>
 </html>
