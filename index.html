@@ -182,6 +182,36 @@
   .apply-bar{display:flex;gap:8px;margin:12px 0;padding:12px;background:#141b26;border:1px solid var(--edge);border-radius:10px;align-items:center}
   .apply-bar span{flex:1;color:var(--ink-dim);font-size:12.5px}
   kbd{background:#0f1118;border:1px solid var(--edge);border-bottom-width:2px;border-radius:5px;padding:1px 6px;font-family:var(--mono);font-size:11px;color:var(--ink-dim)}
+
+  /* scope chip */
+  .scope-chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+    background:#131a26;border:1px solid var(--edge);color:var(--ink-dim);padding:3px 10px;border-radius:14px;margin:0 0 12px}
+  .scope-chip.sel{color:var(--good);border-color:#274a38;background:#122019}
+
+  /* suggestion cards */
+  .sg-list{margin:2px 0 14px}
+  .sg-hd{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--ink-faint);font-weight:700;margin:0 0 9px 2px}
+  .sg{border:1px solid var(--edge);border-radius:11px;padding:11px 12px;margin-bottom:10px;background:var(--panel-2)}
+  .sg.applied{opacity:.55;border-color:#274a38}
+  .sg-add{font-size:10.5px;font-weight:700;letter-spacing:.5px;color:var(--accent);text-transform:uppercase;margin-bottom:5px}
+  .sg-o{font-family:var(--mono);font-size:12.5px;line-height:1.5;color:var(--ink-dim);text-decoration:line-through;text-decoration-color:#5a3a42;margin-bottom:5px}
+  .sg-s{font-family:var(--mono);font-size:13px;line-height:1.5;color:#bfe9cf;background:#122019;border:1px solid #274a38;border-radius:7px;padding:6px 9px}
+  .sg-w{font-size:11.5px;color:var(--ink-faint);margin-top:7px;font-style:italic}
+  .sg-actions{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;align-items:center}
+  .sg-btn{background:var(--panel);border:1px solid var(--edge);color:var(--ink);font-size:11.5px;padding:5px 10px;border-radius:7px}
+  .sg-btn:hover:not(:disabled){border-color:var(--accent);color:#fff}
+  .sg-btn:disabled{opacity:.4;cursor:not-allowed}
+  .sg-btn.rep{color:var(--good);border-color:#274a38}
+  .sg-btn.ins{color:var(--accent);border-color:#2c3a63}
+  .sg-done{font-size:10.5px;color:var(--good);margin-left:auto;font-weight:600}
+
+  /* identity panel (analysis pop-up) */
+  .id-panel{border:1px solid #2c3a63;background:#111726;border-radius:12px;padding:13px 15px;margin-bottom:16px}
+  .id-title{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:9px}
+  .id-chips{display:flex;flex-wrap:wrap;gap:7px}
+  .idc{font-size:11.5px;background:#0f1118;border:1px solid var(--edge);border-radius:14px;padding:4px 10px;color:var(--ink)}
+  .idc b{color:var(--ink-faint);font-weight:600;margin-right:4px;text-transform:uppercase;font-size:9.5px;letter-spacing:.5px}
+  .id-sum{margin-top:10px;font-style:italic;color:var(--ink-dim);font-size:12.5px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -240,9 +270,10 @@ The goal: a better song with the smallest possible changes to your words."></tex
     <div id="suggestBody">
       <div class="placeholder" id="suggestPlaceholder">
         <div class="big">🎼</div>
-        Run a tool from the right-hand rail to get focused, minimal-edit
-        feedback on your lyrics. Results appear here — pop them out with ⛶
-        for a full-screen read.
+        <b style="color:var(--ink-dim)">Select the lines</b> you want to work on, then run a tool
+        from the right-hand rail — each suggestion comes with <b style="color:var(--ink-dim)">Replace</b> and
+        <b style="color:var(--ink-dim)">Keep&nbsp;both</b> so you can apply it inline.
+        <br><br>No selection? The tool works on the whole song. Pop results out with ⛶.
       </div>
     </div>
   </section>
@@ -267,9 +298,10 @@ The goal: a better song with the smallest possible changes to your words."></tex
       <div class="ctl-group">
         <p class="ctl-label">Tips</p>
         <div style="font-size:11px;color:var(--ink-faint);line-height:1.6">
-          Run <b style="color:var(--ink-dim)">Initial Analysis</b> first.<br>
-          <kbd>Ctrl</kbd>+<kbd>S</kbd> saves a version.<br>
-          Every tool aims for <b style="color:var(--ink-dim)">minimal changes</b> to your original words.
+          Run <b style="color:var(--ink-dim)">Initial Analysis</b> first — it captures the song's identity.<br>
+          <b style="color:var(--ink-dim)">Select lines</b> to focus a tool; none = whole song.<br>
+          Apply picks with <b style="color:var(--ink-dim)">Replace</b> / <b style="color:var(--ink-dim)">Keep both</b>.<br>
+          <kbd>Ctrl</kbd>+<kbd>S</kbd> saves a version.
         </div>
       </div>
     </div>
@@ -399,6 +431,7 @@ let state = {
   keys:     store.get('keys',{}),
   models:   store.get('models',{}),
   memory:   store.get('memory',{}),
+  identity: store.get('identity',null),   // auto-captured song identity (from Initial Analysis)
   versions: store.get('versions',[]),
   analyzed: store.get('analyzed',false)
 };
@@ -406,38 +439,50 @@ let state = {
 /* ---------- Tools ---------- */
 const TOOLS = {
   rhymes:{label:'Rhymes',ic:'🔁',sub:'Fresh, non-cliché rhymes',
-    prompt:`Analyze the RHYMES in these lyrics. For the weakest or most predictable rhymes, propose 2-3 fresher alternatives per spot (including slant/internal rhymes) that keep the meaning. Show the current line, then the suggested swap. Preserve the rhyme scheme unless a change clearly improves it. Keep the writer's voice.`},
+    role:`the RHYME ENGINEER — a lyricist obsessed with rhyme quality across perfect, slant, mosaic and internal rhyme.`,
+    prompt:`Audit the rhymes in the target lines. In your analysis, name the rhyme scheme and call out perfect rhymes that feel predictable or forced, weak near-rhymes that miss, and spots begging for internal rhyme. Then, for each weak spot, propose a fresher fix — a swapped end-word, a slant or multisyllabic rhyme, or a lightly reworked line — that keeps the meaning and respects the section's scheme. Prefer changing ONE word over rewriting a whole line.`},
   syllables:{label:'Syllables',ic:'🎵',sub:'Meter & flow balance',
-    prompt:`Analyze the METER. Give a per-line syllable count for each section. Flag lines that break the flow or clash with their section's pattern, and offer minimal rewrites that fix the count while keeping the words and meaning almost identical. Point out where the natural stresses land awkwardly.`},
+    role:`the METER COACH — you hear songs as rhythm and count syllables and stresses like a metronome.`,
+    prompt:`Scan the target lines for meter. In your analysis, give the syllable count per line and state the section's dominant pattern. Flag lines that run too long, too short, or stumble against the groove, and note where stresses fall unnaturally. Then propose edits that lock each flagged line to the pattern with the fewest word changes — add or cut a syllable, swap a word, contract or expand — never gutting the line or its meaning.`},
   cliches:{label:'Clichés',ic:'♻️',sub:'De-cliché the writing',
-    prompt:`Find CLICHÉS, filler, and overused phrases. For each, quote the line and offer a more original replacement that says the same thing in the writer's voice. Do NOT rewrite lines that are already fresh. Rank by how much each hurts the song.`},
+    role:`the ORIGINALITY EDITOR — allergic to clichés, filler and greeting-card phrasing.`,
+    prompt:`Hunt clichés, dead metaphors, filler words and generic phrasing in the target lines. In your analysis, rank the offenders by how much they hurt the song. Then, for each, propose a specific, concrete, original replacement in the writer's voice that carries the same meaning. Leave genuinely fresh lines untouched — do not manufacture problems.`},
   nextlines:{label:'Improve Next Lines',ic:'➡️',sub:'Where the song goes',
-    prompt:`Look at where the lyric currently ends or feels unfinished. Suggest 2-3 candidate NEXT LINES / continuations that match the established rhyme scheme, syllable feel, tone and story. Keep everything already written intact — only add.`},
+    role:`the CO-WRITER — you finish thoughts the way the writer would, only sharper.`,
+    prompt:`Read the target lines as a springboard. Propose candidate NEXT lines / continuations that match the established rhyme scheme, syllable feel, imagery and emotional direction. Offer a few distinct options. These are ADDITIONS: do not alter existing lines — only extend. Every edit here must have "original" set to "" (empty).`},
   wordplay:{label:'Wordplay',ic:'🎭',sub:'Double meanings & devices',
-    prompt:`Suggest WORDPLAY upgrades: double meanings, internal rhyme, alliteration, imagery and metaphor that could elevate specific lines. Quote each target line and show a heightened version. Be tasteful — only where it genuinely improves things and fits the tone. Preserve meaning.`},
+    role:`the WORDPLAY ARCHITECT — you build double meanings, internal rhyme, alliteration and vivid images.`,
+    prompt:`Elevate the target lines with wordplay: double meanings and puns that land, internal rhyme, alliteration, and concrete sensory imagery replacing abstraction. For each target line, show a heightened version that keeps the meaning and tone. Be tasteful — only where it truly improves the line. Note the device you used in the "why".`},
   meanings:{label:'Meanings',ic:'💭',sub:'What it actually says',
-    prompt:`Interpret the MEANING. Section by section, explain what the lyrics communicate, the emotional arc, and any spots where the intended message is muddy or contradictory. Suggest small clarifying tweaks only where meaning is unclear.`},
+    role:`the DRAMATURG — you read for meaning, subtext and emotional truth.`,
+    prompt:`Interpret the target lines: what they say literally and beneath the surface, and the emotional beat they land. In your analysis, walk it section by section. Flag any spot where the intended meaning is muddy, contradictory, or accidentally comic. Propose small clarifying edits ONLY where meaning is genuinely unclear; leave clear lines alone.`},
   chorus:{label:'Chorus',ic:'🔊',sub:'Hook strength',
-    prompt:`Evaluate the CHORUS / HOOK (or propose one if missing). Rate its memorability and singability, identify the strongest line to build around, and offer 2-3 tightened alternatives that hit harder while staying true to the theme. Explain what makes a hook stick.`},
+    role:`the HOOK PRODUCER — you make choruses people can't stop singing.`,
+    prompt:`Treat the target lines as a chorus / hook (or craft one if none exists). In your analysis, judge memorability, singability and emotional punch, and name the single strongest line to build around. Then propose tightened alternatives that hit harder and stay on-theme. When proposing a brand-new hook line rather than editing an existing one, set "original" to "".`},
   review:{label:'Full Review',ic:'📝',sub:'Overall critique',
-    prompt:`Give a full REVIEW: a short overall verdict, then Strengths, then the top 3-5 highest-impact improvements ranked by importance. Cover structure, imagery, rhyme, flow and emotional payoff. Finish with the single next thing to fix. Be honest but encouraging.`},
+    role:`the A&R CRITIC — sharp, honest and constructive.`,
+    prompt:`Give a full review of the target lines: open with a one-line verdict, then key Strengths, then the highest-impact fixes ranked by importance — covering imagery, rhyme, flow, structure and emotional payoff. In the edits, include the top concrete line-level changes that would most improve the song. Be honest but encouraging; end the analysis with the single next thing to fix.`},
   structure:{label:'Structure',ic:'🧱',sub:'Song architecture',
-    prompt:`Analyze the STRUCTURE (verse/pre/chorus/bridge/outro). Map the current arrangement, judge whether the sections earn their place and are balanced, and recommend structural moves (add a pre-chorus, trim a verse, move the bridge) with reasons. If sections aren't labeled, infer them.`}
+    role:`the SONG ARCHITECT — you think in sections and arrangement.`,
+    prompt:`Analyze the structure of the target lines within the context of the whole song: map the sections, judge balance and whether each earns its place, and recommend structural moves (add a pre-chorus, trim a verse, relocate the bridge) with reasons. Edits here are usually about section labels or one pivotal line — keep them minimal and optional.`}
 };
 
 /* =========================================================================
    AI plumbing
    ========================================================================= */
 function systemPrompt(){
-  const m = state.memory;
+  const m = state.memory||{}, id = state.identity||{};
   let brief='';
-  const add=(k,v)=>{if(v&&v.trim())brief+=`- ${k}: ${v.trim()}\n`};
+  const add=(k,v)=>{if(v&&(''+v).trim())brief+=`- ${k}: ${(''+v).trim()}\n`};
   add('Title',m.title);add('Genre',m.genre);add('Mood',m.mood);
   add('Point of view',m.pov);add('Theme/Story',m.theme);add('Style notes & rules',m.notes);
+  let ident='';
+  const iadd=(k,v)=>{if(v&&(''+v).trim())ident+=`- ${k}: ${(''+v).trim()}\n`};
+  iadd('Title',id.title);iadd('Genre',id.genre);iadd('Mood',id.mood);iadd('POV',id.pov);
+  iadd('Theme',id.theme);iadd('Rhyme scheme',id.rhymeScheme);iadd('Signature imagery',id.imagery);iadd('In one line',id.summary);
   return `You are LyricLab, an expert songwriting collaborator and lyric editor.
-Your prime directive: make the song BETTER with the SMALLEST possible changes to the human writer's original words. Preserve their voice, intent and phrasing. Never wholesale-rewrite unless explicitly asked. When you suggest a change, keep it surgical and explain briefly why it helps.
-Format answers in clean Markdown: short headers, tight bullet lists, and use \`code\` or > quotes to show original vs suggested lines. Be concrete and specific to THESE lyrics — no generic advice.
-${brief?`\nSONG BRIEF (honor this):\n${brief}`:''}`;
+Your prime directive: make the song BETTER with the SMALLEST possible changes to the human writer's original words. Preserve their voice, intent and phrasing. Never wholesale-rewrite unless explicitly asked. When you suggest a change, keep it surgical.
+${ident?`\nSONG IDENTITY (auto-detected from the Initial Analysis — this is the fixed identity of the song; honor it in every suggestion so edits stay true to what the song is):\n${ident}`:''}${brief?`\nWRITER'S BRIEF (from Song Memory — if it conflicts with the identity above, the brief wins):\n${brief}`:''}`;
 }
 
 async function callAI(userContent, {maxTokens=2000}={}){
@@ -565,29 +610,141 @@ editor.addEventListener('scroll',()=>{gutter.scrollTop=editor.scrollTop});
 /* =========================================================================
    Suggestions panel
    ========================================================================= */
-let lastResult={title:'',html:''};
-function showThinking(toolLabel){
-  $('#suggestTool').textContent=toolLabel;
-  $('#suggestBody').innerHTML=`<div class="tool-tag">${toolLabel}</div><div class="thinking"><div class="spinner"></div>Thinking with ${PROVIDERS[state.provider].name}…</div>`;
+let lastResult={title:'',html:'',raw:''};
+let lastEdits=[];        // structured edits from the last tool run
+let currentTarget=null;  // the {scope,lineFrom,lineTo,...} the last tool ran on
+
+/* ---- work out what the tool should operate on: the selection, else whole song ---- */
+function getTarget(){
+  const full=editor.value;
+  let s=editor.selectionStart, e=editor.selectionEnd;
+  if(s==null||s===e){
+    return {full, sel:full, scope:'song', lineFrom:1, lineTo:full.split('\n').length};
+  }
+  const from=full.lastIndexOf('\n',s-1)+1;          // expand to whole lines
+  let to=full.indexOf('\n',e); if(to===-1)to=full.length;
+  const sel=full.slice(from,to);
+  const lineFrom=full.slice(0,from).split('\n').length;
+  const lineTo=lineFrom+sel.split('\n').length-1;
+  return {full, sel, scope:'selection', lineFrom, lineTo};
 }
-function showResult(toolLabel,md){
-  const html=`<div class="tool-tag">${toolLabel}</div><div class="md">${renderMD(md)}</div>`;
-  $('#suggestBody').innerHTML=html;
-  lastResult={title:toolLabel,html:`<div class="md">${renderMD(md)}</div>`,raw:md};
+function scopeChip(tgt){
+  return tgt.scope==='selection'
+    ? `<span class="scope-chip sel">✎ Selected lines ${tgt.lineFrom}–${tgt.lineTo}</span>`
+    : `<span class="scope-chip">◎ Whole song</span>`;
+}
+
+function buildToolPrompt(t,tgt){
+  const onSel = tgt.scope==='selection';
+  return `YOUR ROLE for this task: you are ${t.role}
+TASK: ${t.prompt}
+
+SCOPE: ${onSel
+  ? `Operate ONLY on the TARGET LINES below (lines ${tgt.lineFrom}–${tgt.lineTo} of the song). Every edit's "original" must be copied verbatim from the TARGET LINES. Use the FULL SONG only as context.`
+  : `Operate on the whole song below.`}
+
+RULES:
+- Honor the song identity/brief in the system prompt so edits stay true to what this song is.
+- Improve with the SMALLEST possible change; preserve the writer's voice, meaning and any working lines.
+- After a SHORT Markdown analysis, output a fenced \`\`\`json block: an array of concrete edits.
+  Each edit: {"original":"<a single line copied EXACTLY from the target, or \\"\\" for a brand-new/added line>","suggested":"<your improved or new line>","why":"<max ~12 words>"}
+- "original" must match a real line character-for-character (minus surrounding spaces) so it can be located. For additions, use "".
+- Return the 2–6 highest-impact edits, best first. If nothing should change, return [].
+- The json must be valid and parseable on its own — no comments, no prose inside it.
+
+${onSel?`TARGET LINES (edit these):\n"""\n${tgt.sel}\n"""\n\nFULL SONG (context only):\n"""\n${tgt.full}\n"""`
+       :`SONG:\n"""\n${tgt.full}\n"""`}`;
+}
+
+function showThinking(label,tgt){
+  $('#suggestTool').textContent=label;
+  $('#suggestBody').innerHTML=`<div class="tool-tag">${label}</div>${scopeChip(tgt)}
+    <div class="thinking"><div class="spinner"></div>Thinking with ${PROVIDERS[state.provider].name}…</div>`;
 }
 function showError(msg){
-  $('#suggestBody').innerHTML=`<div class="md"><blockquote><strong style="color:var(--bad)">Couldn't reach the AI.</strong><br>${esc(msg)}</blockquote><p style="color:var(--ink-dim)">Check your key & model in ⚙️ Settings. For Claude, browser access needs a key that permits direct browser calls.</p></div>`;
+  $('#suggestBody').innerHTML=`<div class="md"><blockquote><strong style="color:var(--bad)">Couldn't reach the AI.</strong><br>${esc(msg)}</blockquote><p style="color:var(--ink-dim)">Check your key &amp; model in ⚙️ Settings. For Claude, browser access needs a key that permits direct browser calls.</p></div>`;
+}
+function parseEdits(md){
+  const m=md.match(/```json\s*\n([\s\S]*?)```/i);
+  if(!m) return {edits:[],rest:md.trim()};
+  let edits=[];
+  try{const p=JSON.parse(m[1]); if(Array.isArray(p)) edits=p;}catch(e){}
+  return {edits, rest:md.replace(m[0],'').trim()};
+}
+function editCard(ed,i){
+  const isAdd=!ed.original||!(''+ed.original).trim();
+  return `<div class="sg" data-i="${i}">
+    ${isAdd?`<div class="sg-add">＋ new line</div>`:`<div class="sg-o">${esc(ed.original)}</div>`}
+    <div class="sg-s">${esc(ed.suggested||'')}</div>
+    ${ed.why?`<div class="sg-w">${esc(ed.why)}</div>`:''}
+    <div class="sg-actions">
+      ${isAdd
+        ? `<button class="sg-btn ins">＋ Insert</button>`
+        : `<button class="sg-btn rep">↔ Replace</button><button class="sg-btn both">⧉ Keep both</button>`}
+      <button class="sg-btn copy">⧉ Copy</button>
+    </div></div>`;
+}
+function renderToolResult(label,md,tgt){
+  const {edits,rest}=parseEdits(md);
+  lastEdits=edits;
+  const cards=edits.length
+      ? `<div class="sg-list"><div class="sg-hd">Suggestions — apply inline</div>${edits.map(editCard).join('')}</div>`
+      : `<p style="color:var(--ink-faint)">No line changes suggested for this scope.</p>`;
+  const analysis=rest?`<div class="md">${renderMD(rest)}</div>`:'';
+  const inner=`<div class="tool-tag">${label}</div>${scopeChip(tgt)}${cards}${analysis}`;
+  $('#suggestBody').innerHTML=inner;
+  lastResult={title:label,html:inner,raw:md};
+  wireCards($('#suggestBody'));
+}
+function wireCards(root){
+  root.querySelectorAll('.sg').forEach(card=>{
+    const ed=lastEdits[+card.dataset.i]; if(!ed)return;
+    const b=(sel)=>card.querySelector(sel);
+    b('.rep') && (b('.rep').onclick=()=>applyEdit(card,ed,'replace'));
+    b('.both')&& (b('.both').onclick=()=>applyEdit(card,ed,'both'));
+    b('.ins') && (b('.ins').onclick=()=>applyEdit(card,ed,'insert'));
+    b('.copy').onclick=()=>{navigator.clipboard.writeText(ed.suggested||'');toast('Copied ✓')};
+  });
+}
+function applyEdit(card,ed,mode){
+  const orig=(''+(ed.original||'')).trim(), sug=(''+(ed.suggested||'')).trim();
+  if(!sug){toast('Nothing to apply',true);return;}
+  snapshot('before AI edit');
+  let lines=editor.value.split('\n');
+  if(mode==='insert'){
+    const at=(currentTarget&&currentTarget.scope==='selection')?currentTarget.lineTo:lines.length;
+    lines.splice(at,0,sug);
+  }else{
+    let idx=lines.findIndex(l=>l.trim()===orig);
+    if(idx<0){toast('Original line not found — copy it in manually',true);return;}
+    const indent=lines[idx].match(/^\s*/)[0];
+    if(mode==='replace') lines[idx]=indent+sug;
+    else lines.splice(idx+1,0,indent+sug);   // keep both
+  }
+  const val=lines.join('\n');
+  editor.value=val; refreshEditor(); store.set('lyrics',val);
+  markApplied(card,mode);
+  toast(mode==='replace'?'Replaced ✓':mode==='both'?'Added below ✓':'Inserted ✓');
+}
+function markApplied(card,mode){
+  card.classList.add('applied');
+  card.querySelectorAll('.sg-btn').forEach(b=>{if(!b.classList.contains('copy'))b.disabled=true});
+  const tag=document.createElement('span');tag.className='sg-done';
+  tag.textContent=mode==='replace'?'replaced':mode==='both'?'kept both':'inserted';
+  card.querySelector('.sg-actions').appendChild(tag);
 }
 
 async function runTool(id){
   if(!state.keys[state.provider]){openSettings();return;}
-  const text=editor.value.trim();
-  if(!text){toast('Add some lyrics first',true);return;}
   const t=TOOLS[id];
-  showThinking(t.label);
+  const tgt=getTarget();
+  currentTarget=tgt;
+  if(!tgt.full.trim()){toast('Add some lyrics first',true);return;}
+  if(tgt.scope==='selection' && !tgt.sel.trim()){toast('Select some lyric lines, or clear the selection to use the whole song',true);return;}
+  showThinking(t.label,tgt);
   try{
-    const md=await callAI(`${t.prompt}\n\nLYRICS:\n"""\n${text}\n"""`);
-    showResult(t.label,md||'*No response.*');
+    const md=await callAI(buildToolPrompt(t,tgt),{maxTokens:2200});
+    renderToolResult(t.label, md||'*No response.*', tgt);
   }catch(e){showError(e.message)}
 }
 
@@ -599,11 +756,19 @@ async function runInitialAnalysis(){
   const text=editor.value.trim();
   if(!text){toast('Paste your raw song first',true);return;}
   openPop('✨ Initial Analysis',`<div class="thinking"><div class="spinner"></div>Structuring your song with ${PROVIDERS[state.provider].name}…</div>`);
-  const instruction=`This is a RAW, possibly unstructured song. Do two things:
+  const instruction=`You are LyricLab's song analyst. This is a RAW, possibly unstructured song. Do THREE things, in this order:
 
-1. Restructure it into a clean, properly labeled song using section headers like [Intro], [Verse 1], [Pre-Chorus], [Chorus], [Verse 2], [Bridge], [Outro] as appropriate. Keep the writer's actual words — only reorganize, label sections, and fix obvious line breaks. Do NOT rewrite the lyrics. Return this structured version inside a fenced code block that starts with \`\`\`lyrics and ends with \`\`\`.
+1. Restructure it into a clean, properly labeled song using section headers like [Intro], [Verse 1], [Pre-Chorus], [Chorus], [Verse 2], [Bridge], [Outro] as appropriate. Keep the writer's ACTUAL words — only reorganize, label sections, and fix obvious line breaks. Do NOT rewrite the lyrics. Return this structured version inside a fenced code block that starts with \`\`\`lyrics and ends with \`\`\`.
 
-2. After the code block, give a short **Analysis**: identify the sections you found, the apparent theme, rhyme scheme, and 2-3 things that are working plus 2-3 opportunities — as brief Markdown.`;
+2. Then output the song's IDENTITY as a fenced \`\`\`json block with EXACTLY these keys, each a short string:
+   {"title":"","genre":"","mood":"","pov":"","theme":"","rhymeScheme":"","imagery":"","summary":""}
+   - title: a fitting working title (invent one if none is obvious)
+   - pov: e.g. "1st person", "direct address (you)"
+   - imagery: the 2-4 signature images/motifs, comma-separated
+   - summary: the whole song in one sentence
+   This identity is the song's permanent creative fingerprint and will guide every later edit — make it accurate.
+
+3. After that, give a short **Analysis** in Markdown: the sections you found, plus 2-3 things working and 2-3 opportunities.`;
   try{
     const md=await callAI(`${instruction}\n\nRAW SONG:\n"""\n${text}\n"""`,{maxTokens:2600});
     renderAnalysis(md);
@@ -613,10 +778,39 @@ function extractLyricsBlock(md){
   const m=md.match(/```(?:lyrics)?\s*\n([\s\S]*?)```/i);
   return m?m[1].replace(/\s+$/,''):null;
 }
+function captureIdentity(md){
+  const m=md.match(/```json\s*\n([\s\S]*?)```/i);
+  if(!m) return null;
+  try{
+    const id=JSON.parse(m[1]);
+    state.identity=id; store.set('identity',id);
+    // auto-fill Song Memory fields that the writer hasn't set themselves
+    const mem=state.memory||{};
+    const fill=(k,v)=>{if(v&&(''+v).trim()&&!(mem[k]&&mem[k].trim()))mem[k]=(''+v).trim()};
+    fill('title',id.title);fill('genre',id.genre);fill('mood',id.mood);
+    fill('pov',id.pov);fill('theme',id.theme);
+    if(id.imagery&&(''+id.imagery).trim()&&!(mem.notes&&mem.notes.trim())) mem.notes='Signature imagery: '+id.imagery;
+    state.memory=mem; store.set('memory',mem);
+    return id;
+  }catch(e){return null}
+}
+function identityChips(id){
+  if(!id) return '';
+  const pairs=[['Title',id.title],['Genre',id.genre],['Mood',id.mood],['POV',id.pov],['Rhyme',id.rhymeScheme]]
+    .filter(p=>p[1]&&(''+p[1]).trim());
+  const chips=pairs.map(p=>`<span class="idc"><b>${p[0]}</b> ${esc(''+p[1])}</span>`).join('');
+  return `<div class="id-panel"><div class="id-title">🪪 Song identity captured — sent with every AI tool from now on</div>
+    <div class="id-chips">${chips}</div>
+    ${id.summary?`<div class="id-sum">"${esc(''+id.summary)}"</div>`:''}</div>`;
+}
 function renderAnalysis(md){
   const structured=extractLyricsBlock(md);
-  const rest=md.replace(/```(?:lyrics)?\s*\n[\s\S]*?```/i,'').trim();
-  let html='';
+  const identity=captureIdentity(md);
+  const rest=md
+    .replace(/```(?:lyrics)?\s*\n[\s\S]*?```/i,'')  // strip structured lyrics
+    .replace(/```json\s*\n[\s\S]*?```/i,'')          // strip identity json
+    .trim();
+  let html=identityChips(identity);
   if(structured){
     html+=`<div class="apply-bar"><span>A structured version is ready. Applying it keeps your words but adds section labels &amp; clean breaks — your current draft is snapshotted first.</span>
       <button class="btn primary" id="applyStructured">Apply to editor</button></div>`;
