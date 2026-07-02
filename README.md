@@ -40,9 +40,23 @@ provider you chose — nothing else leaves your machine.
 
 ## Tools
 
-**Rhymes · Syllables · Clichés · Improve Next Lines · Wordplay · Meanings · Chorus ·
-Full Review · Structure** — each runs with its own **defined role** (e.g. the Rhyme
-Engineer, the Meter Coach, the Hook Producer) and a detailed, purpose-built prompt.
+**Enhance:** Rhymes · Syllables · Clichés · Wordplay · Imagery & Senses ·
+Pop Culture Refs · Improve Next Lines · Chorus
+**Analyze:** Meanings · Compatibility · Repetition · Structure · Full Review
+
+Each tool runs with its own **defined role** (the Rhyme Engineer, the Meter Coach,
+the Continuity Editor, the Reference Digger, the Hook Producer…) and a detailed,
+purpose-built prompt.
+
+- **🧩 Compatibility** checks how well all the lines and sections fit *each other* —
+  theme drift, tone clashes, POV/tense flips, vocabulary mismatches — and pulls
+  outlier lines back into the song.
+- **🎬 Pop Culture Refs** searches your lines for spots where a reference (music,
+  film, TV, sports, games, memes…) would elevate the writing, matched to the song's
+  identity. Optionally steer it ("90s hip-hop", "Tarantino movies", "anime").
+- **🔂 Repetition** separates intentional refrains from accidental echoes; the live
+  **echo** stat in the editor footer shows your most-repeated word at a glance.
+- **🖼️ Imagery & Senses** swaps flat abstractions for concrete sensory images.
 
 Every tool:
 - Operates on your **current selection** (whole lines), or the whole song if nothing
@@ -59,6 +73,9 @@ Every tool:
   imports; restore any point. `Ctrl/Cmd+S` snapshots on demand.
 - **📥 Import / 📤 Export** — round-trip `.txt`.
 - **Auto-save** — your draft persists across reloads.
+- **🆕 New Song / Reset** — a dedicated reset area that wipes the song's whole
+  memory (lyrics, auto-captured identity, Song Memory, optionally version history)
+  so you can start a fresh track. API keys and settings are always kept.
 
 ## Extras baked in
 

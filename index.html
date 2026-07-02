@@ -205,6 +205,14 @@
   .sg-btn.ins{color:var(--accent);border-color:#2c3a63}
   .sg-done{font-size:10.5px;color:var(--good);margin-left:auto;font-weight:600}
 
+  /* reset + pop-culture modals */
+  .chk{display:flex;gap:11px;align-items:flex-start;padding:10px 12px;border:1px solid var(--edge);border-radius:10px;margin-bottom:8px;background:var(--panel-2);cursor:pointer;font-size:13px}
+  .chk:hover{border-color:var(--accent)}
+  .chk input{margin-top:3px;accent-color:var(--accent-2)}
+  .chk small{display:block;color:var(--ink-faint);font-size:11px;margin-top:2px;line-height:1.45}
+  .mini-btn.danger-mini{color:#e8909d;border-color:#43272e;margin-top:2px}
+  .mini-btn.danger-mini:hover{background:#2a1a1f;color:#ffb3bd;border-color:#5a2a32}
+
   /* identity panel (analysis pop-up) */
   .id-panel{border:1px solid #2c3a63;background:#111726;border-radius:12px;padding:13px 15px;margin-bottom:16px}
   .id-title{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:9px}
@@ -223,6 +231,7 @@
   <button class="topbtn primary" id="analyzeBtn" title="Structure the raw song into sections (run first)">✨ Initial Analysis</button>
   <button class="topbtn" id="memoryBtn">🧠 Memory</button>
   <button class="topbtn" id="versionsBtn">🕘 Versions</button>
+  <button class="topbtn" id="newSongBtn" title="Reset the workspace for a new song">🆕 New Song</button>
   <button class="topbtn" id="settingsBtn">⚙️ Settings</button>
 </header>
 
@@ -252,6 +261,7 @@ The goal: a better song with the smallest possible changes to your words."></tex
       <span><b id="statWords">0</b> words</span>
       <span><b id="statSyl">0</b> syllables</span>
       <span>rhyme <b id="statRhyme">—</b></span>
+      <span title="Most repeated meaningful word">echo <b id="statEcho">—</b></span>
       <span class="grow"></span>
       <span id="saveState" style="color:var(--ink-faint)">auto-saved</span>
     </div>
@@ -283,8 +293,12 @@ The goal: a better song with the smallest possible changes to your words."></tex
     <div class="panel-head"><span class="ph-title">Tools</span></div>
     <div id="controlsBody">
       <div class="ctl-group">
+        <p class="ctl-label">Enhance</p>
+        <div id="toolsEnhance"></div>
+      </div>
+      <div class="ctl-group">
         <p class="ctl-label">Analyze</p>
-        <div id="toolButtons"></div>
+        <div id="toolsAnalyze"></div>
       </div>
       <div class="ctl-group">
         <p class="ctl-label">Session</p>
@@ -294,6 +308,7 @@ The goal: a better song with the smallest possible changes to your words."></tex
           <button class="mini-btn" id="importBtn2">📥 Import</button>
           <button class="mini-btn" id="exportBtn2">📤 Export</button>
         </div>
+        <button class="mini-btn danger-mini" id="newSongBtn2">🆕 New Song / Reset</button>
       </div>
       <div class="ctl-group">
         <p class="ctl-label">Tips</p>
@@ -301,7 +316,8 @@ The goal: a better song with the smallest possible changes to your words."></tex
           Run <b style="color:var(--ink-dim)">Initial Analysis</b> first — it captures the song's identity.<br>
           <b style="color:var(--ink-dim)">Select lines</b> to focus a tool; none = whole song.<br>
           Apply picks with <b style="color:var(--ink-dim)">Replace</b> / <b style="color:var(--ink-dim)">Keep both</b>.<br>
-          <kbd>Ctrl</kbd>+<kbd>S</kbd> saves a version.
+          <kbd>Ctrl</kbd>+<kbd>S</kbd> saves a version.<br>
+          <b style="color:var(--ink-dim)">🆕 New Song</b> wipes the song's memory for a fresh track.
         </div>
       </div>
     </div>
@@ -397,6 +413,54 @@ The goal: a better song with the smallest possible changes to your words."></tex
   </div>
 </div>
 
+<!-- ============ POP CULTURE FINDER MODAL ============ -->
+<div class="overlay" id="pcOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2>🎬 Pop Culture Finder</h2><div class="spacer"></div><button class="iconbtn" id="pcClose">✕</button></div>
+    <div class="modal-body">
+      <p style="color:var(--ink-dim);margin-top:0;line-height:1.6">
+        Scans your <b id="pcScope">selected lines</b> for spots where a well-chosen reference —
+        music, film, TV, sports, games, memes, history — would elevate the lyric, and proposes
+        the reworked lines. References are matched to your song's identity.
+      </p>
+      <label class="field">
+        <span class="lbl">Steer it (optional)</span>
+        <input type="text" id="pcHint" placeholder="e.g. 90s hip-hop, NBA, Tarantino movies, Turkish pop, anime…">
+        <span class="hint">Leave empty to let the AI pick whatever fits the song best.</span>
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="pcCancel">Cancel</button>
+      <button class="btn primary" id="pcRun">🔎 Find references</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ NEW SONG / RESET MODAL ============ -->
+<div class="overlay" id="resetOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2>🆕 Start a new song</h2><div class="spacer"></div><button class="iconbtn" id="resetClose">✕</button></div>
+    <div class="modal-body">
+      <p style="color:var(--ink-dim);margin-top:0;line-height:1.6">
+        Clear the workspace so LyricLab forgets this song and starts fresh.
+        Pick what to wipe — <b>your API keys and settings are always kept</b>.
+      </p>
+      <label class="chk"><input type="checkbox" id="rsLyrics" checked>
+        <span>Lyrics<small>Empty the editor. A snapshot is taken first if version history is kept.</small></span></label>
+      <label class="chk"><input type="checkbox" id="rsIdentity" checked>
+        <span>Song identity<small>The auto-detected fingerprint from Initial Analysis — stops being sent to the AI.</small></span></label>
+      <label class="chk"><input type="checkbox" id="rsMemory" checked>
+        <span>Song Memory<small>Title, genre, mood, POV, theme and style notes.</small></span></label>
+      <label class="chk"><input type="checkbox" id="rsVersions">
+        <span>Version history<small>All snapshots of this song. Keep them if you might come back.</small></span></label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="resetCancel">Cancel</button>
+      <button class="btn primary" id="resetGo">Reset &amp; start fresh</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <input type="file" id="fileInput" accept=".txt,.md" style="display:none">
 
@@ -464,7 +528,19 @@ const TOOLS = {
     prompt:`Give a full review of the target lines: open with a one-line verdict, then key Strengths, then the highest-impact fixes ranked by importance — covering imagery, rhyme, flow, structure and emotional payoff. In the edits, include the top concrete line-level changes that would most improve the song. Be honest but encouraging; end the analysis with the single next thing to fix.`},
   structure:{label:'Structure',ic:'🧱',sub:'Song architecture',
     role:`the SONG ARCHITECT — you think in sections and arrangement.`,
-    prompt:`Analyze the structure of the target lines within the context of the whole song: map the sections, judge balance and whether each earns its place, and recommend structural moves (add a pre-chorus, trim a verse, relocate the bridge) with reasons. Edits here are usually about section labels or one pivotal line — keep them minimal and optional.`}
+    prompt:`Analyze the structure of the target lines within the context of the whole song: map the sections, judge balance and whether each earns its place, and recommend structural moves (add a pre-chorus, trim a verse, relocate the bridge) with reasons. Edits here are usually about section labels or one pivotal line — keep them minimal and optional.`},
+  cohesion:{label:'Compatibility',ic:'🧩',sub:'Do all lines belong?',
+    role:`the CONTINUITY EDITOR — you make sure every line sounds like it belongs to the same song.`,
+    prompt:`Check how well the target lines fit EACH OTHER and the rest of the song. In your analysis, look for: theme or story drift, mood/tone clashes, POV or tense flips, vocabulary register mismatches (slang vs formal), images that contradict each other, and any passage that feels imported from a different song. Give a short compatibility verdict per section (strong / drifting / off-song), explain how the sections connect (or fail to), and name the single least-compatible line. Then propose minimal edits that pull the outlier lines back into the song's identity — change as few words as possible.`},
+  repetition:{label:'Repetition',ic:'🔂',sub:'Echoes & overuse',
+    role:`the ECHO HUNTER — you track every repeated word, phrase and image in a lyric.`,
+    prompt:`Audit repetition in the target lines. Separate GOOD repetition (hooks, refrains, deliberate anaphora) from BAD repetition (crutch words, accidental echoes, recycled rhyme pairs, the same image used twice). In the analysis, list the most-repeated words/phrases with counts and judge each one: keep as a motif, or vary. Then propose swaps ONLY for the accidental echoes — synonyms or lightly reworked phrasings in the writer's voice that preserve the meter.`},
+  imagery:{label:'Imagery & Senses',ic:'🖼️',sub:'Concrete over abstract',
+    role:`the IMAGE MAKER — you turn abstract statements into pictures the listener can see, hear and touch.`,
+    prompt:`Audit the imagery in the target lines. In the analysis, note which senses the song currently uses (sight, sound, touch, smell, taste), where it leans on abstractions ("pain", "love", "memories") instead of pictures, and which existing images are the strongest. Then propose edits that swap the flattest abstract lines for concrete, sensory images consistent with the song's identity and signature imagery. Keep the writer's voice; never stack more than one new image per line.`},
+  popculture:{label:'Pop Culture Refs',ic:'🎬',sub:'References that fit',
+    role:`the REFERENCE DIGGER — a walking encyclopedia of music, film, TV, sports, games, fashion, internet culture and history, with sharp taste for which references elevate a lyric and which cheapen it.`,
+    prompt:`Search the target lines for spots where a POP CULTURE REFERENCE would genuinely elevate the writing — a name-drop, an allusion, a reworked famous phrase, or a simile built on a known moment. For each spot, propose the reworked line with the reference embedded. In each edit's "why", name the reference and what it adds. Match references to the song's genre, mood and likely audience/era; skip anything obscure to that audience, badly dated, or a verbatim lift of protected lyrics. Quality over quantity — a forced reference is worse than none. If nothing fits, say so in the analysis and return [].`}
 };
 
 /* =========================================================================
@@ -597,6 +673,18 @@ function refreshEditor(){
   $('#statWords').textContent=words;
   $('#statSyl').textContent=syl;
   $('#statRhyme').textContent=nonEmpty.length?detectRhymeScheme(nonEmpty.slice(0,8)):'—';
+  $('#statEcho').textContent=topEcho(nonEmpty.join(' '));
+}
+const ECHO_STOP=new Set(('the and that with this your from have just like what when they been will were into over then them there their because about would could should never always every gonna wanna cant dont aint youre theyre weve youve thats').split(' '));
+function topEcho(text){
+  const freq={};
+  (text.toLowerCase().match(/[a-z']+/g)||[]).forEach(w=>{
+    w=w.replace(/'/g,'');
+    if(w.length>3&&!ECHO_STOP.has(w))freq[w]=(freq[w]||0)+1;
+  });
+  let best=null;
+  for(const w in freq)if(!best||freq[w]>freq[best])best=w;
+  return best&&freq[best]>=3?`${best} ×${freq[best]}`:'—';
 }
 let saveTimer;
 editor.addEventListener('input',()=>{
@@ -613,6 +701,7 @@ editor.addEventListener('scroll',()=>{gutter.scrollTop=editor.scrollTop});
 let lastResult={title:'',html:'',raw:''};
 let lastEdits=[];        // structured edits from the last tool run
 let currentTarget=null;  // the {scope,lineFrom,lineTo,...} the last tool ran on
+const PLACEHOLDER=document.querySelector('#suggestPlaceholder').outerHTML;
 
 /* ---- work out what the tool should operate on: the selection, else whole song ---- */
 function getTarget(){
@@ -634,11 +723,11 @@ function scopeChip(tgt){
     : `<span class="scope-chip">◎ Whole song</span>`;
 }
 
-function buildToolPrompt(t,tgt){
+function buildToolPrompt(t,tgt,hint){
   const onSel = tgt.scope==='selection';
   return `YOUR ROLE for this task: you are ${t.role}
 TASK: ${t.prompt}
-
+${hint?`\nUSER FOCUS: the writer wants this steered toward: "${hint}". Honor it.\n`:''}
 SCOPE: ${onSel
   ? `Operate ONLY on the TARGET LINES below (lines ${tgt.lineFrom}–${tgt.lineTo} of the song). Every edit's "original" must be copied verbatim from the TARGET LINES. Use the FULL SONG only as context.`
   : `Operate on the whole song below.`}
@@ -734,8 +823,9 @@ function markApplied(card,mode){
   card.querySelector('.sg-actions').appendChild(tag);
 }
 
-async function runTool(id){
+async function runTool(id,hint){
   if(!state.keys[state.provider]){openSettings();return;}
+  if(id==='popculture' && hint===undefined){openPopCulture();return;} // ask for an optional steer first
   const t=TOOLS[id];
   const tgt=getTarget();
   currentTarget=tgt;
@@ -743,10 +833,49 @@ async function runTool(id){
   if(tgt.scope==='selection' && !tgt.sel.trim()){toast('Select some lyric lines, or clear the selection to use the whole song',true);return;}
   showThinking(t.label,tgt);
   try{
-    const md=await callAI(buildToolPrompt(t,tgt),{maxTokens:2200});
+    const md=await callAI(buildToolPrompt(t,tgt,hint),{maxTokens:2200});
     renderToolResult(t.label, md||'*No response.*', tgt);
   }catch(e){showError(e.message)}
 }
+
+/* ---- pop culture finder modal ---- */
+function openPopCulture(){
+  const tgt=getTarget();
+  $('#pcScope').textContent = tgt.scope==='selection'
+    ? `selected lines ${tgt.lineFrom}–${tgt.lineTo}` : 'whole song';
+  $('#pcHint').value = store.get('pcHint','');
+  $('#pcOverlay').classList.add('show');
+  $('#pcHint').focus();
+}
+$('#pcRun').onclick=()=>{
+  const hint=$('#pcHint').value.trim();
+  store.set('pcHint',hint);
+  closeAll();
+  runTool('popculture',hint); // '' = no steer, AI picks freely
+};
+$('#pcClose').onclick=closeAll;$('#pcCancel').onclick=closeAll;
+$('#pcHint').addEventListener('keydown',e=>{if(e.key==='Enter')$('#pcRun').click()});
+
+/* ---- new song / reset ---- */
+function openReset(){$('#resetOverlay').classList.add('show')}
+$('#resetGo').onclick=()=>{
+  const clr={
+    lyrics:$('#rsLyrics').checked, identity:$('#rsIdentity').checked,
+    memory:$('#rsMemory').checked, versions:$('#rsVersions').checked
+  };
+  if(clr.lyrics && !clr.versions && editor.value.trim()) snapshot('before new song');
+  if(clr.versions){state.versions=[];store.set('versions',[]);}
+  if(clr.lyrics){editor.value='';store.set('lyrics','');refreshEditor();}
+  if(clr.identity){state.identity=null;store.del('identity');}
+  if(clr.memory){state.memory={};store.set('memory',{});}
+  state.analyzed=false;store.set('analyzed',false);
+  $('#structuredFlag').style.display='none';
+  lastEdits=[];lastResult={title:'',html:'',raw:''};currentTarget=null;
+  $('#suggestBody').innerHTML=PLACEHOLDER;$('#suggestTool').textContent='';
+  closeAll();toast('Fresh canvas — ready for a new song ✓');
+};
+$('#newSongBtn').onclick=openReset;$('#newSongBtn2').onclick=openReset;
+$('#resetClose').onclick=closeAll;$('#resetCancel').onclick=closeAll;
 
 /* =========================================================================
    Initial Analysis (structuring)
@@ -951,7 +1080,7 @@ $('#fileInput').onchange=e=>{
 /* popout suggestions */
 $('#popoutBtn').onclick=()=>{if(lastResult.html)openPop(lastResult.title||'Suggestions',lastResult.html);else toast('Nothing to pop out yet',true)};
 $('#copySuggest').onclick=()=>{if(lastResult.raw){navigator.clipboard.writeText(lastResult.raw);toast('Copied ✓')}};
-$('#clearSuggest').onclick=()=>{$('#suggestBody').innerHTML=$('#suggestPlaceholder').outerHTML;$('#suggestTool').textContent='';lastResult={};};
+$('#clearSuggest').onclick=()=>{$('#suggestBody').innerHTML=PLACEHOLDER;$('#suggestTool').textContent='';lastResult={title:'',html:'',raw:''};lastEdits=[];};
 
 /* header + control buttons */
 $('#analyzeBtn').onclick=runInitialAnalysis;
@@ -965,8 +1094,14 @@ $('#saveVerBtn').onclick=()=>{snapshot('manual save');toast('Version saved ✓')
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('mousedown',e=>{if(e.target===o)o.classList.remove('show')}));
 
 /* build tool rail */
-$('#toolButtons').innerHTML=Object.entries(TOOLS).map(([id,t])=>
-  `<button class="tool-btn" data-tool="${id}"><span class="ic">${t.ic}</span><span class="txt">${t.label}<small>${t.sub}</small></span></button>`).join('');
+const TOOL_GROUPS={
+  enhance:['rhymes','syllables','cliches','wordplay','imagery','popculture','nextlines','chorus'],
+  analyze:['meanings','cohesion','repetition','structure','review']
+};
+const toolBtnHTML=id=>{const t=TOOLS[id];
+  return `<button class="tool-btn" data-tool="${id}"><span class="ic">${t.ic}</span><span class="txt">${t.label}<small>${t.sub}</small></span></button>`};
+$('#toolsEnhance').innerHTML=TOOL_GROUPS.enhance.map(toolBtnHTML).join('');
+$('#toolsAnalyze').innerHTML=TOOL_GROUPS.analyze.map(toolBtnHTML).join('');
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>runTool(b.dataset.tool));
 
 /* keyboard */
