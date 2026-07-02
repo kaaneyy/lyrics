@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LyricLab — AI Lyric Writer & Editor</title>
+<style>
+  :root{
+    --bg:#0e1015; --panel:#161a22; --panel-2:#1d2230; --edge:#2a3040;
+    --ink:#e8ecf4; --ink-dim:#9aa4b6; --ink-faint:#66708a;
+    --accent:#7c9cff; --accent-2:#5b7cff; --good:#4bd08b; --warn:#ffb454; --bad:#ff6b7d;
+    --chip:#242b3b; --radius:10px; --mono:'SFMono-Regular',ui-monospace,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    font-size:14px; overflow:hidden; display:flex; flex-direction:column;
+  }
+  button{font-family:inherit;cursor:pointer}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:var(--edge);border-radius:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  /* ---------- Top bar ---------- */
+  header{
+    display:flex; align-items:center; gap:14px; padding:9px 16px;
+    background:linear-gradient(180deg,#191e28,#12151d); border-bottom:1px solid var(--edge);
+    flex:0 0 auto;
+  }
+  .logo{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.3px}
+  .logo .dot{width:12px;height:12px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,#a9c0ff,var(--accent-2));box-shadow:0 0 12px var(--accent)}
+  .logo small{font-weight:500;color:var(--ink-faint);font-size:11px;letter-spacing:.5px}
+  header .spacer{flex:1}
+  .provider-pill{
+    display:flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--edge);
+    padding:5px 11px;border-radius:20px;font-size:12px;color:var(--ink-dim)
+  }
+  .provider-pill b{color:var(--ink)}
+  .provider-pill .status{width:8px;height:8px;border-radius:50%;background:var(--bad)}
+  .provider-pill .status.ok{background:var(--good);box-shadow:0 0 8px var(--good)}
+  .topbtn{
+    background:var(--panel-2);border:1px solid var(--edge);color:var(--ink);
+    padding:7px 12px;border-radius:8px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px
+  }
+  .topbtn:hover{border-color:var(--accent);color:#fff}
+  .topbtn.primary{background:var(--accent-2);border-color:var(--accent-2);color:#fff;font-weight:600}
+  .topbtn.primary:hover{background:var(--accent)}
+  .topbtn:disabled{opacity:.45;cursor:not-allowed}
+
+  /* ---------- Workspace 44 / 40 / 16 ---------- */
+  main{flex:1 1 auto;display:flex;min-height:0}
+  .panel{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--edge)}
+  .panel:last-child{border-right:none}
+  #lyricsPanel{flex:0 0 44%}
+  #suggestPanel{flex:0 0 40%}
+  #controlsPanel{flex:0 0 16%;background:var(--panel)}
+  .panel-head{
+    display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--edge);
+    background:var(--panel);font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--ink-dim);
+    flex:0 0 auto
+  }
+  .panel-head .ph-title{font-weight:700;color:var(--ink)}
+  .panel-head .spacer{flex:1}
+  .iconbtn{
+    background:transparent;border:1px solid transparent;color:var(--ink-dim);
+    width:26px;height:26px;border-radius:6px;font-size:14px;display:grid;place-items:center;line-height:1
+  }
+  .iconbtn:hover{background:var(--panel-2);color:#fff;border-color:var(--edge)}
+
+  /* ---------- Lyrics editor ---------- */
+  .editor-wrap{flex:1;display:flex;min-height:0;background:#12141b}
+  .gutter{
+    flex:0 0 auto;padding:14px 8px 14px 12px;text-align:right;color:var(--ink-faint);
+    font-family:var(--mono);font-size:12.5px;line-height:1.7;user-select:none;
+    border-right:1px solid var(--edge);white-space:pre;overflow:hidden;min-width:46px;background:#0f1118
+  }
+  .gutter .syl{color:var(--accent);opacity:.65}
+  #editor{
+    flex:1;background:transparent;border:none;outline:none;resize:none;color:var(--ink);
+    font-family:var(--mono);font-size:14px;line-height:1.7;padding:14px 16px;letter-spacing:.2px;
+    tab-size:4;white-space:pre;overflow:auto
+  }
+  #editor::placeholder{color:var(--ink-faint)}
+  .editor-foot{
+    display:flex;gap:16px;padding:6px 14px;border-top:1px solid var(--edge);background:var(--panel);
+    font-size:11.5px;color:var(--ink-dim);flex:0 0 auto;flex-wrap:wrap;align-items:center
+  }
+  .editor-foot b{color:var(--ink)}
+  .editor-foot .grow{flex:1}
+
+  /* ---------- Suggestions ---------- */
+  #suggestBody{flex:1;overflow:auto;padding:16px 18px}
+  .placeholder{color:var(--ink-faint);text-align:center;margin-top:14%;padding:0 20px;line-height:1.7}
+  .placeholder .big{font-size:34px;margin-bottom:10px;opacity:.5}
+  .tool-tag{
+    display:inline-flex;align-items:center;gap:7px;background:var(--chip);border:1px solid var(--edge);
+    color:var(--accent);padding:4px 11px;border-radius:16px;font-size:11.5px;font-weight:600;margin-bottom:12px
+  }
+  .md h1,.md h2,.md h3{color:#fff;margin:16px 0 8px;line-height:1.3}
+  .md h1{font-size:18px}.md h2{font-size:16px}.md h3{font-size:14px;color:var(--accent)}
+  .md p{margin:8px 0;line-height:1.7;color:var(--ink)}
+  .md ul,.md ol{margin:8px 0;padding-left:20px}
+  .md li{margin:5px 0;line-height:1.6}
+  .md strong{color:#fff}
+  .md em{color:var(--warn);font-style:normal}
+  .md code{background:#0f1118;border:1px solid var(--edge);border-radius:5px;padding:1px 6px;font-family:var(--mono);font-size:12.5px;color:#ffd9a0}
+  .md pre{background:#0d0f16;border:1px solid var(--edge);border-radius:8px;padding:12px 14px;overflow:auto;margin:10px 0}
+  .md pre code{background:none;border:none;padding:0;color:#cfe0ff;white-space:pre;line-height:1.6}
+  .md blockquote{border-left:3px solid var(--accent);margin:10px 0;padding:2px 14px;color:var(--ink-dim);background:#141824;border-radius:0 8px 8px 0}
+  .md hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
+  .thinking{display:flex;align-items:center;gap:10px;color:var(--ink-dim);padding:10px 0}
+  .spinner{width:16px;height:16px;border:2px solid var(--edge);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ---------- Controls ---------- */
+  #controlsBody{flex:1;overflow:auto;padding:12px 12px 20px}
+  .ctl-group{margin-bottom:18px}
+  .ctl-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink-faint);margin:0 0 8px 2px;font-weight:700}
+  .tool-btn{
+    width:100%;text-align:left;background:var(--panel-2);border:1px solid var(--edge);color:var(--ink);
+    padding:9px 11px;border-radius:9px;font-size:13px;display:flex;align-items:center;gap:9px;margin-bottom:7px;transition:.12s
+  }
+  .tool-btn:hover:not(:disabled){border-color:var(--accent);background:#232a3b;transform:translateX(2px)}
+  .tool-btn:disabled{opacity:.4;cursor:not-allowed}
+  .tool-btn .ic{font-size:15px;width:18px;text-align:center}
+  .tool-btn small{display:block;color:var(--ink-faint);font-size:10.5px;margin-top:1px}
+  .tool-btn .txt{line-height:1.2}
+  .mini-btn{
+    width:100%;background:var(--panel-2);border:1px solid var(--edge);color:var(--ink-dim);
+    padding:7px;border-radius:8px;font-size:11.5px;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px
+  }
+  .mini-btn:hover{color:#fff;border-color:var(--accent)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+
+  /* ---------- Modals ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(6,8,12,.72);backdrop-filter:blur(3px);z-index:50;display:none;align-items:center;justify-content:center;padding:24px}
+  .overlay.show{display:flex}
+  .modal{
+    background:var(--panel);border:1px solid var(--edge);border-radius:16px;width:100%;max-width:560px;
+    max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.55);overflow:hidden
+  }
+  .modal.wide{max-width:900px}
+  .modal-head{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--edge)}
+  .modal-head h2{margin:0;font-size:16px}
+  .modal-head .spacer{flex:1}
+  .modal-body{padding:20px;overflow:auto}
+  .modal-foot{padding:14px 20px;border-top:1px solid var(--edge);display:flex;gap:10px;justify-content:flex-end;background:var(--panel-2)}
+  label.field{display:block;margin-bottom:15px}
+  label.field .lbl{display:block;font-size:12px;color:var(--ink-dim);margin-bottom:6px;font-weight:600}
+  label.field .hint{font-size:11px;color:var(--ink-faint);margin-top:5px}
+  input[type=text],input[type=password],textarea,select{
+    width:100%;background:#0f1118;border:1px solid var(--edge);color:var(--ink);border-radius:9px;
+    padding:10px 12px;font-size:13px;font-family:inherit;outline:none
+  }
+  input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+  textarea{resize:vertical;line-height:1.6;font-family:var(--mono)}
+  .seg{display:flex;gap:6px;background:#0f1118;border:1px solid var(--edge);border-radius:10px;padding:4px}
+  .seg button{flex:1;background:transparent;border:none;color:var(--ink-dim);padding:9px;border-radius:7px;font-size:12.5px;font-weight:600}
+  .seg button.active{background:var(--accent-2);color:#fff}
+  .btn{background:var(--panel-2);border:1px solid var(--edge);color:var(--ink);padding:9px 16px;border-radius:9px;font-size:13px}
+  .btn:hover{border-color:var(--accent)}
+  .btn.primary{background:var(--accent-2);border-color:var(--accent-2);color:#fff;font-weight:600}
+  .btn.primary:hover{background:var(--accent)}
+  .btn.ghost{background:transparent}
+  .btn.danger{color:var(--bad);border-color:#43272e}
+  .btn.danger:hover{background:#2a1a1f}
+
+  /* version list */
+  .ver{display:flex;align-items:center;gap:12px;padding:11px 12px;border:1px solid var(--edge);border-radius:10px;margin-bottom:8px;background:var(--panel-2)}
+  .ver .meta{flex:1;min-width:0}
+  .ver .meta b{font-size:13px}
+  .ver .meta small{display:block;color:var(--ink-faint);font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ver .tag{font-size:10px;background:var(--chip);border:1px solid var(--edge);color:var(--ink-dim);padding:2px 7px;border-radius:10px}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--panel-2);border:1px solid var(--edge);color:var(--ink);padding:11px 18px;border-radius:10px;font-size:13px;z-index:80;opacity:0;transition:.25s;box-shadow:0 12px 30px rgba(0,0,0,.4);pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.err{border-color:#5a2a32}
+  .diffbox{background:#0d0f16;border:1px solid var(--edge);border-radius:10px;padding:14px;font-family:var(--mono);font-size:13px;line-height:1.7;white-space:pre-wrap;overflow:auto}
+  .apply-bar{display:flex;gap:8px;margin:12px 0;padding:12px;background:#141b26;border:1px solid var(--edge);border-radius:10px;align-items:center}
+  .apply-bar span{flex:1;color:var(--ink-dim);font-size:12.5px}
+  kbd{background:#0f1118;border:1px solid var(--edge);border-bottom-width:2px;border-radius:5px;padding:1px 6px;font-family:var(--mono);font-size:11px;color:var(--ink-dim)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="dot"></span>LyricLab <small>AI songwriting studio</small></div>
+  <div class="spacer"></div>
+  <div class="provider-pill"><span class="status" id="provStatus"></span>Engine: <b id="provName">—</b></div>
+  <button class="topbtn primary" id="analyzeBtn" title="Structure the raw song into sections (run first)">✨ Initial Analysis</button>
+  <button class="topbtn" id="memoryBtn">🧠 Memory</button>
+  <button class="topbtn" id="versionsBtn">🕘 Versions</button>
+  <button class="topbtn" id="settingsBtn">⚙️ Settings</button>
+</header>
+
+<main>
+  <!-- ============ LYRICS (44%) ============ -->
+  <section class="panel" id="lyricsPanel">
+    <div class="panel-head">
+      <span class="ph-title">Lyrics</span>
+      <span id="structuredFlag" style="color:var(--good);display:none">● structured</span>
+      <div class="spacer"></div>
+      <button class="iconbtn" id="importBtn" title="Import .txt">📥</button>
+      <button class="iconbtn" id="exportBtn" title="Export .txt">📤</button>
+      <button class="iconbtn" id="saveVerBtn" title="Save version (Ctrl+S)">💾</button>
+    </div>
+    <div class="editor-wrap">
+      <div class="gutter" id="gutter"></div>
+      <textarea id="editor" spellcheck="true" placeholder="Paste or write your raw lyrics here…
+
+Then hit  ✨ Initial Analysis  up top to auto-structure the song into
+[Verse], [Chorus], [Bridge] sections — after that, use the tools on the
+right to sharpen rhymes, syllables, wordplay and more.
+
+The goal: a better song with the smallest possible changes to your words."></textarea>
+    </div>
+    <div class="editor-foot">
+      <span><b id="statLines">0</b> lines</span>
+      <span><b id="statWords">0</b> words</span>
+      <span><b id="statSyl">0</b> syllables</span>
+      <span>rhyme <b id="statRhyme">—</b></span>
+      <span class="grow"></span>
+      <span id="saveState" style="color:var(--ink-faint)">auto-saved</span>
+    </div>
+  </section>
+
+  <!-- ============ AI SUGGESTIONS (40%) ============ -->
+  <section class="panel" id="suggestPanel">
+    <div class="panel-head">
+      <span class="ph-title">AI Suggestions</span>
+      <span id="suggestTool" style="color:var(--accent)"></span>
+      <div class="spacer"></div>
+      <button class="iconbtn" id="copySuggest" title="Copy">⧉</button>
+      <button class="iconbtn" id="popoutBtn" title="Pop out to full screen">⛶</button>
+      <button class="iconbtn" id="clearSuggest" title="Clear">✕</button>
+    </div>
+    <div id="suggestBody">
+      <div class="placeholder" id="suggestPlaceholder">
+        <div class="big">🎼</div>
+        Run a tool from the right-hand rail to get focused, minimal-edit
+        feedback on your lyrics. Results appear here — pop them out with ⛶
+        for a full-screen read.
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CONTROLS (16%) ============ -->
+  <section class="panel" id="controlsPanel">
+    <div class="panel-head"><span class="ph-title">Tools</span></div>
+    <div id="controlsBody">
+      <div class="ctl-group">
+        <p class="ctl-label">Analyze</p>
+        <div id="toolButtons"></div>
+      </div>
+      <div class="ctl-group">
+        <p class="ctl-label">Session</p>
+        <button class="mini-btn" id="memoryBtn2">🧠 Song Memory</button>
+        <button class="mini-btn" id="versionsBtn2">🕘 Versions &amp; Restore</button>
+        <div class="row2">
+          <button class="mini-btn" id="importBtn2">📥 Import</button>
+          <button class="mini-btn" id="exportBtn2">📤 Export</button>
+        </div>
+      </div>
+      <div class="ctl-group">
+        <p class="ctl-label">Tips</p>
+        <div style="font-size:11px;color:var(--ink-faint);line-height:1.6">
+          Run <b style="color:var(--ink-dim)">Initial Analysis</b> first.<br>
+          <kbd>Ctrl</kbd>+<kbd>S</kbd> saves a version.<br>
+          Every tool aims for <b style="color:var(--ink-dim)">minimal changes</b> to your original words.
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ============ API KEY / SETTINGS MODAL ============ -->
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="settingsTitle">Connect an AI engine</h2>
+      <div class="spacer"></div>
+      <button class="iconbtn" id="settingsClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--ink-dim);margin-top:0;line-height:1.6" id="settingsIntro">
+        LyricLab talks directly to your chosen provider from this browser — your key is stored
+        only in this browser's local storage and never sent anywhere else.
+      </p>
+      <label class="field">
+        <span class="lbl">Provider</span>
+        <div class="seg" id="providerSeg">
+          <button data-p="claude">Claude</button>
+          <button data-p="openai">ChatGPT</button>
+          <button data-p="deepseek">DeepSeek</button>
+        </div>
+      </label>
+      <label class="field">
+        <span class="lbl">API Key</span>
+        <input type="password" id="apiKeyInput" placeholder="sk-…" autocomplete="off">
+        <span class="hint" id="keyHint"></span>
+      </label>
+      <label class="field">
+        <span class="lbl">Model</span>
+        <input type="text" id="modelInput" placeholder="model id">
+        <span class="hint" id="modelHint"></span>
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="testKeyBtn">Test connection</button>
+      <button class="btn primary" id="saveKeyBtn">Save &amp; use</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MEMORY MODAL ============ -->
+<div class="overlay" id="memoryOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2>🧠 Song Memory</h2><div class="spacer"></div><button class="iconbtn" id="memoryClose">✕</button></div>
+    <div class="modal-body">
+      <p style="color:var(--ink-dim);margin-top:0;line-height:1.6">
+        Context you set here is sent with every AI tool so suggestions match your intent.
+        Think of it as a brief for the co-writer.
+      </p>
+      <div class="row2" style="gap:12px">
+        <label class="field"><span class="lbl">Title</span><input type="text" id="memTitle" placeholder="Working title"></label>
+        <label class="field"><span class="lbl">Genre</span><input type="text" id="memGenre" placeholder="e.g. indie folk, drill, pop-punk"></label>
+      </div>
+      <div class="row2" style="gap:12px">
+        <label class="field"><span class="lbl">Mood / Tone</span><input type="text" id="memMood" placeholder="e.g. bittersweet, defiant"></label>
+        <label class="field"><span class="lbl">Point of view</span><input type="text" id="memPOV" placeholder="e.g. 1st person, direct address"></label>
+      </div>
+      <label class="field"><span class="lbl">Theme / Story</span>
+        <textarea id="memTheme" rows="3" placeholder="What's the song about? The core idea, the arc, who it's for…"></textarea></label>
+      <label class="field"><span class="lbl">Style references &amp; rules</span>
+        <textarea id="memNotes" rows="3" placeholder="Artists to echo, words to avoid, rhyme scheme to keep, lines that are untouchable…"></textarea></label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="memoryClear">Clear</button>
+      <button class="btn primary" id="memorySave">Save memory</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VERSIONS MODAL ============ -->
+<div class="overlay" id="versionsOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2>🕘 Versions</h2><div class="spacer"></div><button class="iconbtn" id="versionsClose">✕</button></div>
+    <div class="modal-body">
+      <div class="apply-bar"><span>Snapshots of your lyrics. Restore any point, or keep writing — a new snapshot is kept whenever you run Initial Analysis or press Save.</span>
+        <button class="btn" id="snapNow">Snapshot now</button></div>
+      <div id="versionList"></div>
+    </div>
+    <div class="modal-foot"><button class="btn danger" id="clearVersions">Delete all</button><button class="btn primary" id="versionsCloseFoot">Done</button></div>
+  </div>
+</div>
+
+<!-- ============ POPOUT / ANALYSIS MODAL ============ -->
+<div class="overlay" id="popOverlay">
+  <div class="modal wide">
+    <div class="modal-head"><h2 id="popTitle">Suggestions</h2><div class="spacer"></div><button class="iconbtn" id="popClose">✕</button></div>
+    <div class="modal-body" id="popBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="fileInput" accept=".txt,.md" style="display:none">
+
+<script>
+/* =========================================================================
+   LyricLab — single-file AI lyric editor
+   Talks to Claude / OpenAI / DeepSeek directly from the browser.
+   ========================================================================= */
+const $ = s => document.querySelector(s);
+const store = {
+  get:(k,d)=>{try{const v=localStorage.getItem('lyriclab_'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+  set:(k,v)=>localStorage.setItem('lyriclab_'+k,JSON.stringify(v)),
+  del:k=>localStorage.removeItem('lyriclab_'+k)
+};
+
+/* ---------- Provider config ---------- */
+const PROVIDERS = {
+  claude:  {name:'Claude',  defaultModel:'claude-opus-4-8',
+            keyHint:'From console.anthropic.com — starts with sk-ant-',
+            modelHint:'e.g. claude-opus-4-8, claude-sonnet-5, claude-haiku-4-5'},
+  openai:  {name:'ChatGPT', defaultModel:'gpt-4o',
+            keyHint:'From platform.openai.com — starts with sk-',
+            modelHint:'e.g. gpt-4o, gpt-4.1, gpt-4o-mini'},
+  deepseek:{name:'DeepSeek',defaultModel:'deepseek-chat',
+            keyHint:'From platform.deepseek.com — starts with sk-',
+            modelHint:'e.g. deepseek-chat, deepseek-reasoner'}
+};
+
+/* ---------- App state ---------- */
+let state = {
+  provider: store.get('provider','claude'),
+  keys:     store.get('keys',{}),
+  models:   store.get('models',{}),
+  memory:   store.get('memory',{}),
+  versions: store.get('versions',[]),
+  analyzed: store.get('analyzed',false)
+};
+
+/* ---------- Tools ---------- */
+const TOOLS = {
+  rhymes:{label:'Rhymes',ic:'🔁',sub:'Fresh, non-cliché rhymes',
+    prompt:`Analyze the RHYMES in these lyrics. For the weakest or most predictable rhymes, propose 2-3 fresher alternatives per spot (including slant/internal rhymes) that keep the meaning. Show the current line, then the suggested swap. Preserve the rhyme scheme unless a change clearly improves it. Keep the writer's voice.`},
+  syllables:{label:'Syllables',ic:'🎵',sub:'Meter & flow balance',
+    prompt:`Analyze the METER. Give a per-line syllable count for each section. Flag lines that break the flow or clash with their section's pattern, and offer minimal rewrites that fix the count while keeping the words and meaning almost identical. Point out where the natural stresses land awkwardly.`},
+  cliches:{label:'Clichés',ic:'♻️',sub:'De-cliché the writing',
+    prompt:`Find CLICHÉS, filler, and overused phrases. For each, quote the line and offer a more original replacement that says the same thing in the writer's voice. Do NOT rewrite lines that are already fresh. Rank by how much each hurts the song.`},
+  nextlines:{label:'Improve Next Lines',ic:'➡️',sub:'Where the song goes',
+    prompt:`Look at where the lyric currently ends or feels unfinished. Suggest 2-3 candidate NEXT LINES / continuations that match the established rhyme scheme, syllable feel, tone and story. Keep everything already written intact — only add.`},
+  wordplay:{label:'Wordplay',ic:'🎭',sub:'Double meanings & devices',
+    prompt:`Suggest WORDPLAY upgrades: double meanings, internal rhyme, alliteration, imagery and metaphor that could elevate specific lines. Quote each target line and show a heightened version. Be tasteful — only where it genuinely improves things and fits the tone. Preserve meaning.`},
+  meanings:{label:'Meanings',ic:'💭',sub:'What it actually says',
+    prompt:`Interpret the MEANING. Section by section, explain what the lyrics communicate, the emotional arc, and any spots where the intended message is muddy or contradictory. Suggest small clarifying tweaks only where meaning is unclear.`},
+  chorus:{label:'Chorus',ic:'🔊',sub:'Hook strength',
+    prompt:`Evaluate the CHORUS / HOOK (or propose one if missing). Rate its memorability and singability, identify the strongest line to build around, and offer 2-3 tightened alternatives that hit harder while staying true to the theme. Explain what makes a hook stick.`},
+  review:{label:'Full Review',ic:'📝',sub:'Overall critique',
+    prompt:`Give a full REVIEW: a short overall verdict, then Strengths, then the top 3-5 highest-impact improvements ranked by importance. Cover structure, imagery, rhyme, flow and emotional payoff. Finish with the single next thing to fix. Be honest but encouraging.`},
+  structure:{label:'Structure',ic:'🧱',sub:'Song architecture',
+    prompt:`Analyze the STRUCTURE (verse/pre/chorus/bridge/outro). Map the current arrangement, judge whether the sections earn their place and are balanced, and recommend structural moves (add a pre-chorus, trim a verse, move the bridge) with reasons. If sections aren't labeled, infer them.`}
+};
+
+/* =========================================================================
+   AI plumbing
+   ========================================================================= */
+function systemPrompt(){
+  const m = state.memory;
+  let brief='';
+  const add=(k,v)=>{if(v&&v.trim())brief+=`- ${k}: ${v.trim()}\n`};
+  add('Title',m.title);add('Genre',m.genre);add('Mood',m.mood);
+  add('Point of view',m.pov);add('Theme/Story',m.theme);add('Style notes & rules',m.notes);
+  return `You are LyricLab, an expert songwriting collaborator and lyric editor.
+Your prime directive: make the song BETTER with the SMALLEST possible changes to the human writer's original words. Preserve their voice, intent and phrasing. Never wholesale-rewrite unless explicitly asked. When you suggest a change, keep it surgical and explain briefly why it helps.
+Format answers in clean Markdown: short headers, tight bullet lists, and use \`code\` or > quotes to show original vs suggested lines. Be concrete and specific to THESE lyrics — no generic advice.
+${brief?`\nSONG BRIEF (honor this):\n${brief}`:''}`;
+}
+
+async function callAI(userContent, {maxTokens=2000}={}){
+  const provider = state.provider;
+  const key = (state.keys[provider]||'').trim();
+  const model = (state.models[provider]||PROVIDERS[provider].defaultModel).trim();
+  if(!key) throw new Error('No API key set for '+PROVIDERS[provider].name);
+
+  if(provider==='claude'){
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-api-key':key,
+        'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model,max_tokens:maxTokens,system:systemPrompt(),
+        messages:[{role:'user',content:userContent}]})
+    });
+    const data = await r.json();
+    if(!r.ok) throw new Error(data.error?.message||('Claude error '+r.status));
+    return (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
+  }
+  // OpenAI + DeepSeek share the chat/completions shape
+  const base = provider==='openai'
+      ? 'https://api.openai.com/v1/chat/completions'
+      : 'https://api.deepseek.com/chat/completions';
+  const r = await fetch(base,{
+    method:'POST',
+    headers:{'content-type':'application/json','authorization':'Bearer '+key},
+    body:JSON.stringify({model,max_tokens:maxTokens,
+      messages:[{role:'system',content:systemPrompt()},{role:'user',content:userContent}]})
+  });
+  const data = await r.json();
+  if(!r.ok) throw new Error(data.error?.message||(PROVIDERS[provider].name+' error '+r.status));
+  return (data.choices?.[0]?.message?.content||'').trim();
+}
+
+/* =========================================================================
+   Markdown (tiny)
+   ========================================================================= */
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function mdInline(s){
+  return esc(s)
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*]+)\*/g,'$1<em>$2</em>');
+}
+function renderMD(src){
+  const lines=src.split('\n');let html='',i=0,inList=false,listTag='ul';
+  const closeList=()=>{if(inList){html+=`</${listTag}>`;inList=false}};
+  while(i<lines.length){
+    let ln=lines[i];
+    if(/^```/.test(ln)){
+      let lang=ln.replace(/^```/,'').trim(),buf=[];i++;
+      while(i<lines.length&&!/^```/.test(lines[i])){buf.push(lines[i]);i++}
+      i++;closeList();
+      html+=`<pre><code>${esc(buf.join('\n'))}</code></pre>`;continue;
+    }
+    let h=ln.match(/^(#{1,3})\s+(.*)/);
+    if(h){closeList();html+=`<h${h[1].length}>${mdInline(h[2])}</h${h[1].length}>`;i++;continue}
+    if(/^>\s?/.test(ln)){closeList();html+=`<blockquote>${mdInline(ln.replace(/^>\s?/,''))}</blockquote>`;i++;continue}
+    if(/^(-{3,}|\*{3,})\s*$/.test(ln)){closeList();html+='<hr>';i++;continue}
+    let ol=ln.match(/^\s*\d+\.\s+(.*)/), ul=ln.match(/^\s*[-*]\s+(.*)/);
+    if(ol||ul){
+      const want=ol?'ol':'ul';
+      if(inList&&listTag!==want)closeList();
+      if(!inList){listTag=want;html+=`<${want}>`;inList=true}
+      html+=`<li>${mdInline((ol||ul)[1])}</li>`;i++;continue;
+    }
+    if(ln.trim()===''){closeList();i++;continue}
+    closeList();html+=`<p>${mdInline(ln)}</p>`;i++;
+  }
+  closeList();return html;
+}
+
+/* =========================================================================
+   Editor + stats + gutter
+   ========================================================================= */
+const editor=$('#editor'),gutter=$('#gutter');
+function countSyllables(word){
+  word=word.toLowerCase().replace(/[^a-z]/g,'');
+  if(!word)return 0;
+  if(word.length<=3)return 1;
+  word=word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/,'').replace(/^y/,'');
+  const m=word.match(/[aeiouy]{1,2}/g);
+  return m?m.length:1;
+}
+function lineSyllables(line){
+  return (line.match(/[A-Za-z']+/g)||[]).reduce((n,w)=>n+countSyllables(w),0);
+}
+function rhymeKey(line){
+  const words=line.match(/[A-Za-z']+/g);if(!words)return null;
+  const w=words[words.length-1].toLowerCase();
+  const m=w.match(/[aeiouy][a-z]*$/);return m?m[0]:w.slice(-2);
+}
+function detectRhymeScheme(lines){
+  const keys=lines.map(l=>l.trim()?rhymeKey(l):null);
+  const map={};let next=0;const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const scheme=keys.map(k=>{if(k==null)return' ';if(!(k in map))map[k]=letters[next++%26];return map[k]});
+  return scheme.join('').replace(/\s+/g,' ').trim().slice(0,16);
+}
+function refreshEditor(){
+  const text=editor.value;
+  const lines=text.split('\n');
+  gutter.innerHTML=lines.map(l=>{
+    if(l.trim()==='')return '&nbsp;';
+    if(/^\s*\[.*\]\s*$/.test(l))return '<span style="color:var(--warn)">§</span>';
+    return `<span class="syl">${lineSyllables(l)}</span>`;
+  }).join('\n');
+  const words=(text.match(/[A-Za-z']+/g)||[]).length;
+  const syl=lines.reduce((n,l)=>n+lineSyllables(l),0);
+  const nonEmpty=lines.filter(l=>l.trim()&&!/^\s*\[.*\]\s*$/.test(l));
+  $('#statLines').textContent=nonEmpty.length;
+  $('#statWords').textContent=words;
+  $('#statSyl').textContent=syl;
+  $('#statRhyme').textContent=nonEmpty.length?detectRhymeScheme(nonEmpty.slice(0,8)):'—';
+}
+let saveTimer;
+editor.addEventListener('input',()=>{
+  refreshEditor();
+  $('#saveState').textContent='saving…';
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{store.set('lyrics',editor.value);$('#saveState').textContent='auto-saved'},400);
+});
+editor.addEventListener('scroll',()=>{gutter.scrollTop=editor.scrollTop});
+
+/* =========================================================================
+   Suggestions panel
+   ========================================================================= */
+let lastResult={title:'',html:''};
+function showThinking(toolLabel){
+  $('#suggestTool').textContent=toolLabel;
+  $('#suggestBody').innerHTML=`<div class="tool-tag">${toolLabel}</div><div class="thinking"><div class="spinner"></div>Thinking with ${PROVIDERS[state.provider].name}…</div>`;
+}
+function showResult(toolLabel,md){
+  const html=`<div class="tool-tag">${toolLabel}</div><div class="md">${renderMD(md)}</div>`;
+  $('#suggestBody').innerHTML=html;
+  lastResult={title:toolLabel,html:`<div class="md">${renderMD(md)}</div>`,raw:md};
+}
+function showError(msg){
+  $('#suggestBody').innerHTML=`<div class="md"><blockquote><strong style="color:var(--bad)">Couldn't reach the AI.</strong><br>${esc(msg)}</blockquote><p style="color:var(--ink-dim)">Check your key & model in ⚙️ Settings. For Claude, browser access needs a key that permits direct browser calls.</p></div>`;
+}
+
+async function runTool(id){
+  if(!state.keys[state.provider]){openSettings();return;}
+  const text=editor.value.trim();
+  if(!text){toast('Add some lyrics first',true);return;}
+  const t=TOOLS[id];
+  showThinking(t.label);
+  try{
+    const md=await callAI(`${t.prompt}\n\nLYRICS:\n"""\n${text}\n"""`);
+    showResult(t.label,md||'*No response.*');
+  }catch(e){showError(e.message)}
+}
+
+/* =========================================================================
+   Initial Analysis (structuring)
+   ========================================================================= */
+async function runInitialAnalysis(){
+  if(!state.keys[state.provider]){openSettings();return;}
+  const text=editor.value.trim();
+  if(!text){toast('Paste your raw song first',true);return;}
+  openPop('✨ Initial Analysis',`<div class="thinking"><div class="spinner"></div>Structuring your song with ${PROVIDERS[state.provider].name}…</div>`);
+  const instruction=`This is a RAW, possibly unstructured song. Do two things:
+
+1. Restructure it into a clean, properly labeled song using section headers like [Intro], [Verse 1], [Pre-Chorus], [Chorus], [Verse 2], [Bridge], [Outro] as appropriate. Keep the writer's actual words — only reorganize, label sections, and fix obvious line breaks. Do NOT rewrite the lyrics. Return this structured version inside a fenced code block that starts with \`\`\`lyrics and ends with \`\`\`.
+
+2. After the code block, give a short **Analysis**: identify the sections you found, the apparent theme, rhyme scheme, and 2-3 things that are working plus 2-3 opportunities — as brief Markdown.`;
+  try{
+    const md=await callAI(`${instruction}\n\nRAW SONG:\n"""\n${text}\n"""`,{maxTokens:2600});
+    renderAnalysis(md);
+  }catch(e){$('#popBody').innerHTML=`<div class="md"><blockquote><strong style="color:var(--bad)">Analysis failed.</strong><br>${esc(e.message)}</blockquote></div>`}
+}
+function extractLyricsBlock(md){
+  const m=md.match(/```(?:lyrics)?\s*\n([\s\S]*?)```/i);
+  return m?m[1].replace(/\s+$/,''):null;
+}
+function renderAnalysis(md){
+  const structured=extractLyricsBlock(md);
+  const rest=md.replace(/```(?:lyrics)?\s*\n[\s\S]*?```/i,'').trim();
+  let html='';
+  if(structured){
+    html+=`<div class="apply-bar"><span>A structured version is ready. Applying it keeps your words but adds section labels &amp; clean breaks — your current draft is snapshotted first.</span>
+      <button class="btn primary" id="applyStructured">Apply to editor</button></div>`;
+    html+=`<div class="diffbox">${esc(structured)}</div>`;
+  }
+  if(rest)html+=`<div class="md" style="margin-top:16px">${renderMD(rest)}</div>`;
+  $('#popBody').innerHTML=html||'<p>No structure returned.</p>';
+  if(structured){
+    $('#applyStructured').onclick=()=>{
+      snapshot('before Initial Analysis');
+      editor.value=structured;refreshEditor();store.set('lyrics',structured);
+      state.analyzed=true;store.set('analyzed',true);$('#structuredFlag').style.display='';
+      closePop();toast('Structured song applied ✓');
+      snapshot('after Initial Analysis');
+    };
+  }
+  state.analyzed=true;store.set('analyzed',true);$('#structuredFlag').style.display='';
+}
+
+/* =========================================================================
+   Versions
+   ========================================================================= */
+function snapshot(note){
+  const text=editor.value;
+  if(!text.trim())return;
+  const last=state.versions[0];
+  if(last&&last.text===text){last.note=note||last.note;return;}
+  state.versions.unshift({id:Date.now(),ts:new Date().toISOString(),text,note:note||'manual save'});
+  state.versions=state.versions.slice(0,40);
+  store.set('versions',state.versions);
+}
+function renderVersions(){
+  const list=$('#versionList');
+  if(!state.versions.length){list.innerHTML='<p style="color:var(--ink-faint);text-align:center;padding:20px 0">No snapshots yet.</p>';return;}
+  list.innerHTML=state.versions.map(v=>{
+    const d=new Date(v.ts);const when=d.toLocaleDateString()+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    const words=(v.text.match(/[A-Za-z']+/g)||[]).length;
+    return `<div class="ver"><div class="meta"><b>${when}</b><small>${esc(v.note)} · ${words} words</small></div>
+      <span class="tag">v</span>
+      <button class="btn ghost" data-view="${v.id}">View</button>
+      <button class="btn primary" data-restore="${v.id}">Restore</button></div>`;
+  }).join('');
+  list.querySelectorAll('[data-restore]').forEach(b=>b.onclick=()=>{
+    const v=state.versions.find(x=>x.id==b.dataset.restore);
+    if(v){snapshot('before restore');editor.value=v.text;refreshEditor();store.set('lyrics',v.text);toast('Version restored ✓');closeAll();}
+  });
+  list.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{
+    const v=state.versions.find(x=>x.id==b.dataset.view);
+    if(v){openPop('Version — '+new Date(v.ts).toLocaleString(),`<div class="diffbox">${esc(v.text)}</div>`);}
+  });
+}
+
+/* =========================================================================
+   Modals & UI wiring
+   ========================================================================= */
+function toast(msg,err){const t=$('#toast');t.textContent=msg;t.className='toast show'+(err?' err':'');setTimeout(()=>t.className='toast',2200);}
+function closeAll(){document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('show'))}
+function openPop(title,html){$('#popTitle').textContent=title;$('#popBody').innerHTML=html;$('#popOverlay').classList.add('show')}
+function closePop(){$('#popOverlay').classList.remove('show')}
+
+/* provider indicator */
+function refreshProvider(){
+  const p=PROVIDERS[state.provider];
+  $('#provName').textContent=p.name;
+  const ok=!!state.keys[state.provider];
+  $('#provStatus').className='status'+(ok?' ok':'');
+}
+
+/* settings modal */
+let segProvider=state.provider;
+function openSettings(){
+  segProvider=state.provider;
+  paintSeg();$('#settingsOverlay').classList.add('show');
+  $('#settingsTitle').textContent=state.keys[state.provider]?'Settings':'Connect an AI engine';
+}
+function paintSeg(){
+  document.querySelectorAll('#providerSeg button').forEach(b=>b.classList.toggle('active',b.dataset.p===segProvider));
+  const p=PROVIDERS[segProvider];
+  $('#apiKeyInput').value=state.keys[segProvider]||'';
+  $('#modelInput').value=state.models[segProvider]||p.defaultModel;
+  $('#keyHint').textContent=p.keyHint;
+  $('#modelHint').textContent=p.modelHint;
+}
+document.querySelectorAll('#providerSeg button').forEach(b=>b.onclick=()=>{segProvider=b.dataset.p;paintSeg()});
+$('#saveKeyBtn').onclick=()=>{
+  const key=$('#apiKeyInput').value.trim();
+  if(!key){toast('Enter an API key',true);return;}
+  state.keys[segProvider]=key;
+  state.models[segProvider]=$('#modelInput').value.trim()||PROVIDERS[segProvider].defaultModel;
+  state.provider=segProvider;
+  store.set('keys',state.keys);store.set('models',state.models);store.set('provider',state.provider);
+  refreshProvider();closeAll();toast('Connected to '+PROVIDERS[segProvider].name+' ✓');
+};
+$('#testKeyBtn').onclick=async()=>{
+  const key=$('#apiKeyInput').value.trim();
+  if(!key){toast('Enter a key to test',true);return;}
+  const prevP=state.provider,prevK=state.keys[segProvider],prevM=state.models[segProvider];
+  state.provider=segProvider;state.keys[segProvider]=key;state.models[segProvider]=$('#modelInput').value.trim()||PROVIDERS[segProvider].defaultModel;
+  const btn=$('#testKeyBtn');btn.textContent='Testing…';btn.disabled=true;
+  try{await callAI('Reply with just the word: OK',{maxTokens:10});toast('Connection works ✓');}
+  catch(e){toast('Failed: '+e.message,true);state.keys[segProvider]=prevK;state.models[segProvider]=prevM;}
+  finally{state.provider=prevP;btn.textContent='Test connection';btn.disabled=false;}
+};
+
+/* memory modal */
+function openMemory(){
+  const m=state.memory;
+  $('#memTitle').value=m.title||'';$('#memGenre').value=m.genre||'';$('#memMood').value=m.mood||'';
+  $('#memPOV').value=m.pov||'';$('#memTheme').value=m.theme||'';$('#memNotes').value=m.notes||'';
+  $('#memoryOverlay').classList.add('show');
+}
+$('#memorySave').onclick=()=>{
+  state.memory={title:$('#memTitle').value,genre:$('#memGenre').value,mood:$('#memMood').value,
+    pov:$('#memPOV').value,theme:$('#memTheme').value,notes:$('#memNotes').value};
+  store.set('memory',state.memory);closeAll();toast('Memory saved ✓');
+};
+$('#memoryClear').onclick=()=>{['#memTitle','#memGenre','#memMood','#memPOV','#memTheme','#memNotes'].forEach(s=>$(s).value='')};
+
+/* versions modal */
+function openVersions(){renderVersions();$('#versionsOverlay').classList.add('show')}
+$('#snapNow').onclick=()=>{snapshot('manual snapshot');renderVersions();toast('Snapshot saved ✓')};
+$('#clearVersions').onclick=()=>{if(confirm('Delete all snapshots?')){state.versions=[];store.set('versions',[]);renderVersions();}};
+
+/* import / export */
+function exportTxt(){
+  const blob=new Blob([editor.value],{type:'text/plain'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=(state.memory.title||'lyrics').replace(/[^\w -]/g,'')+'.txt';a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Exported ✓');
+}
+function importTxt(){$('#fileInput').click()}
+$('#fileInput').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=()=>{snapshot('before import');editor.value=r.result;refreshEditor();store.set('lyrics',r.result);toast('Imported ✓')};
+  r.readAsText(f);e.target.value='';
+};
+
+/* popout suggestions */
+$('#popoutBtn').onclick=()=>{if(lastResult.html)openPop(lastResult.title||'Suggestions',lastResult.html);else toast('Nothing to pop out yet',true)};
+$('#copySuggest').onclick=()=>{if(lastResult.raw){navigator.clipboard.writeText(lastResult.raw);toast('Copied ✓')}};
+$('#clearSuggest').onclick=()=>{$('#suggestBody').innerHTML=$('#suggestPlaceholder').outerHTML;$('#suggestTool').textContent='';lastResult={};};
+
+/* header + control buttons */
+$('#analyzeBtn').onclick=runInitialAnalysis;
+$('#settingsBtn').onclick=openSettings;$('#settingsClose').onclick=closeAll;
+$('#memoryBtn').onclick=openMemory;$('#memoryBtn2').onclick=openMemory;$('#memoryClose').onclick=closeAll;
+$('#versionsBtn').onclick=openVersions;$('#versionsBtn2').onclick=openVersions;$('#versionsClose').onclick=closeAll;$('#versionsCloseFoot').onclick=closeAll;
+$('#popClose').onclick=closePop;
+$('#exportBtn').onclick=exportTxt;$('#exportBtn2').onclick=exportTxt;
+$('#importBtn').onclick=importTxt;$('#importBtn2').onclick=importTxt;
+$('#saveVerBtn').onclick=()=>{snapshot('manual save');toast('Version saved ✓')};
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('mousedown',e=>{if(e.target===o)o.classList.remove('show')}));
+
+/* build tool rail */
+$('#toolButtons').innerHTML=Object.entries(TOOLS).map(([id,t])=>
+  `<button class="tool-btn" data-tool="${id}"><span class="ic">${t.ic}</span><span class="txt">${t.label}<small>${t.sub}</small></span></button>`).join('');
+document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>runTool(b.dataset.tool));
+
+/* keyboard */
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();snapshot('manual save');toast('Version saved ✓');}
+  if(e.key==='Escape')closeAll();
+});
+
+/* =========================================================================
+   Boot
+   ========================================================================= */
+editor.value=store.get('lyrics','');
+refreshEditor();refreshProvider();
+if(state.analyzed)$('#structuredFlag').style.display='';
+if(!state.keys[state.provider]) openSettings();  // first-run: ask for key immediately
+</script>
+</body>
+</html>
