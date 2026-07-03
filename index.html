@@ -191,8 +191,12 @@
   /* suggestion cards */
   .sg-list{margin:2px 0 14px}
   .sg-hd{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--ink-faint);font-weight:700;margin:0 0 9px 2px}
-  .sg{border:1px solid var(--edge);border-radius:11px;padding:11px 12px;margin-bottom:10px;background:var(--panel-2)}
+  .sg{position:relative;border:1px solid var(--edge);border-radius:11px;padding:11px 26px 11px 12px;margin-bottom:10px;background:var(--panel-2)}
   .sg.applied{opacity:.55;border-color:#274a38}
+  .sg-x{position:absolute;top:6px;right:6px;background:transparent;border:none;color:var(--ink-faint);font-size:12px;line-height:1;padding:4px 6px;border-radius:6px}
+  .sg-x:hover{color:var(--bad);background:#241318}
+  .sg-btn.regen{color:var(--warn);border-color:#5a4a2a}
+  .sg-btn.regen:disabled{color:var(--ink-faint)}
   .sg-add{font-size:10.5px;font-weight:700;letter-spacing:.5px;color:var(--accent);text-transform:uppercase;margin-bottom:5px}
   .sg-o{font-family:var(--mono);font-size:12.5px;line-height:1.5;color:var(--ink-dim);text-decoration:line-through;text-decoration-color:#5a3a42;margin-bottom:5px}
   .sg-s{font-family:var(--mono);font-size:13px;line-height:1.5;color:#bfe9cf;background:#122019;border:1px solid #274a38;border-radius:7px;padding:6px 9px}
@@ -363,6 +367,10 @@ The goal: a better song with the smallest possible changes to your words."></tex
       <div class="ctl-group">
         <p class="ctl-label">Analyze</p>
         <div id="toolsAnalyze"></div>
+      </div>
+      <div class="ctl-group">
+        <p class="ctl-label">Fun</p>
+        <div id="toolsFun"></div>
       </div>
       <div class="ctl-group">
         <p class="ctl-label">Session</p>
@@ -611,6 +619,9 @@ const TOOLS = {
   imagery:{label:'Imagery & Senses',ic:'🖼️',sub:'Concrete over abstract',
     role:`the IMAGE MAKER — you turn abstract statements into pictures the listener can see, hear and touch.`,
     prompt:`Audit the imagery in the target lines. In the analysis, note which senses the song currently uses (sight, sound, touch, smell, taste), where it leans on abstractions ("pain", "love", "memories") instead of pictures, and which existing images are the strongest. Then propose edits that swap the flattest abstract lines for concrete, sensory images consistent with the song's identity and signature imagery. Keep the writer's voice; never stack more than one new image per line.`},
+  kanye:{label:'Dropout Bear',ic:'🐻',sub:'College Dropout-era Ye lens',
+    role:`the COLLEGE DROPOUT-ERA KANYE WHISPERER — a producer-rapper channeling 2004 Ye: chipmunk-soul sample flips, self-aware humor, the faith/family/hustle tension, triumphant underdog energy, and double entendres that make you rewind the bar.`,
+    prompt:`Listen to the target lines the way College Dropout-era Kanye would. Write the analysis in that playful, confident voice (a tasteful ad-lib or two is allowed): which bars would make him rewind, where a punchline or double meaning is begging to land, where the chipmunk-soul flip or gospel choir would drop, and what the "broke but destined" arc of this song is. Then propose edits that give the flattest lines that early-Ye bounce — flipped clichés, wit with heart, soul-sample callbacks, self-deprecation that turns into triumph. Stay true to the song's identity: this is a lens, not a costume. Elevate, don't parody.`},
   popculture:{label:'Pop Culture Refs',ic:'🎬',sub:'References that fit',
     role:`the REFERENCE DIGGER — a walking encyclopedia of music, film, TV, sports, games, fashion, internet culture and history, with sharp taste for which references elevate a lyric and which cheapen it.`,
     prompt:`Search the target lines for spots where a POP CULTURE REFERENCE would genuinely elevate the writing — a name-drop, an allusion, a reworked famous phrase, or a simile built on a known moment. For each spot, propose the reworked line with the reference embedded. In each edit's "why", name the reference and what it adds. Match references to the song's genre, mood and likely audience/era; skip anything obscure to that audience, badly dated, or a verbatim lift of protected lyrics. Quality over quantity — a forced reference is worse than none. If nothing fits, say so in the analysis and return [].`}
@@ -840,7 +851,7 @@ function rhymeKey(line){
     if(idx<0)for(let k=ph.length-1;k>=0;k--)if(/\d$/.test(ph[k])){idx=k;break}
     if(idx>=0)return ph.slice(idx).join(' ').replace(/\d/g,'');
   }
-  const m=w.match(/[aeiouy][a-z]*$/);return m?m[0]:w.slice(-2);
+  const m=w.match(/[aeiouy]+[^aeiouy]*$/);return m?m[0]:w.slice(-2); // last vowel group → end
 }
 
 /* ---- language check: hide syllable/rhyme numbers for non-English lyrics ---- */
@@ -855,7 +866,33 @@ function detectRhymeScheme(lines){
   const keys=lines.map(l=>l.trim()?rhymeKey(l):null);
   const map={};let next=0;const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const scheme=keys.map(k=>{if(k==null)return' ';if(!(k in map))map[k]=letters[next++%26];return map[k]});
-  return scheme.join('').replace(/\s+/g,' ').trim().slice(0,16);
+  return scheme.join('').replace(/\s+/g,' ').trim();
+}
+/* the section the caret is in (falls back to the whole song when unlabeled) */
+function currentSectionLines(){
+  const all=editor.value.split('\n');
+  const isHead=l=>/^\s*\[.*\]\s*$/.test(l);
+  const clean=a=>a.filter(l=>l.trim()&&!isHead(l));
+  const heads=all.map((l,i)=>isHead(l)?i:-1).filter(i=>i>=0);
+  if(!heads.length)return {lines:clean(all),scoped:false};
+  const caretLine=editor.value.slice(0,editor.selectionStart||0).split('\n').length-1;
+  let start=0,end=all.length;
+  for(const h of heads){
+    if(h<=caretLine)start=h+1;
+    else{end=h;break;}
+  }
+  const sect=clean(all.slice(start,end));
+  return sect.length?{lines:sect,scoped:true}:{lines:clean(all),scoped:false};
+}
+function updateRhymeStat(){
+  const el=$('#statRhyme');
+  if(!latinOK){el.textContent='—';return;}
+  const {lines,scoped}=currentSectionLines();
+  if(!lines.length){el.textContent='—';return;}
+  let s=detectRhymeScheme(lines);
+  if(s.length>18)s=s.slice(0,18)+'…';
+  el.textContent=(scoped?'§ ':'')+s;
+  el.title=scoped?'Rhyme scheme of the section at the cursor':'Rhyme scheme of the whole song';
 }
 function refreshEditor(){
   const text=editor.value;
@@ -872,11 +909,10 @@ function refreshEditor(){
   $('#statWords').textContent=words;
   if(latinOK){
     $('#statSyl').textContent=lines.reduce((n,l)=>n+lineSyllables(l),0);
-    $('#statRhyme').textContent=nonEmpty.length?detectRhymeScheme(nonEmpty.slice(0,8)):'—';
   }else{
     $('#statSyl').textContent='—';
-    $('#statRhyme').textContent='—';
   }
+  updateRhymeStat();
   $('#statEcho').textContent=latinOK?topEcho(nonEmpty.join(' ')):'—';
 }
 const ECHO_STOP=new Set(('the and that with this your from have just like what when they been will were into over then them there their because about would could should never always every gonna wanna cant dont aint youre theyre weve youve thats').split(' '));
@@ -898,6 +934,10 @@ editor.addEventListener('input',()=>{
   saveTimer=setTimeout(()=>{store.set('lyrics',editor.value);$('#saveState').textContent='auto-saved'},400);
 });
 editor.addEventListener('scroll',()=>{gutter.scrollTop=editor.scrollTop});
+editor.addEventListener('click',updateRhymeStat);
+editor.addEventListener('keyup',e=>{
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End','PageUp','PageDown'].includes(e.key))updateRhymeStat();
+});
 
 /* =========================================================================
    Suggestions panel
@@ -1018,8 +1058,10 @@ function parseEdits(md){
   }
 }
 function editCard(ed,i){
+  if(ed._dismissed)return '';
   const isAdd=!ed.original||!(''+ed.original).trim();
   return `<div class="sg" data-i="${i}">
+    <button class="sg-x" aria-label="Dismiss this suggestion" title="Dismiss">✕</button>
     ${isAdd?`<div class="sg-add">＋ new line</div>`:`<div class="sg-o">${esc(ed.original)}</div>`}
     <div class="sg-s">${esc(ed.suggested||'')}</div>
     ${ed.why?`<div class="sg-w">${esc(ed.why)}</div>`:''}
@@ -1027,6 +1069,7 @@ function editCard(ed,i){
       ${isAdd
         ? `<button class="sg-btn ins">＋ Insert</button>`
         : `<button class="sg-btn rep">↔ Replace</button><button class="sg-btn both">⧉ Keep both</button>`}
+      <button class="sg-btn regen" title="Ask for a different option for this spot">⟳ Another</button>
       <button class="sg-btn copy">⧉ Copy</button>
     </div></div>`;
 }
@@ -1048,16 +1091,63 @@ function renderEntry(entry){
   refreshHistNav();
 }
 function wireCards(root){
-  root.querySelectorAll('.sg').forEach(card=>{
-    const ed=lastEdits[+card.dataset.i]; if(!ed)return;
-    const b=(sel)=>card.querySelector(sel);
-    b('.rep') && (b('.rep').onclick=()=>applyEdit(card,ed,'replace'));
-    b('.both')&& (b('.both').onclick=()=>applyEdit(card,ed,'both'));
-    b('.ins') && (b('.ins').onclick=()=>applyEdit(card,ed,'insert'));
-    b('.copy').onclick=()=>{navigator.clipboard.writeText(ed.suggested||'');toast('Copied ✓')};
-    card.addEventListener('mouseenter',()=>previewEdit(ed));
-    card.addEventListener('mouseleave',hideLineHL);
-  });
+  root.querySelectorAll('.sg').forEach(card=>wireCard(card));
+}
+function wireCard(card){
+  const i=+card.dataset.i, ed=lastEdits[i]; if(!ed)return;
+  const b=(sel)=>card.querySelector(sel);
+  b('.rep') && (b('.rep').onclick=()=>applyEdit(card,ed,'replace'));
+  b('.both')&& (b('.both').onclick=()=>applyEdit(card,ed,'both'));
+  b('.ins') && (b('.ins').onclick=()=>applyEdit(card,ed,'insert'));
+  b('.regen')&&(b('.regen').onclick=()=>regenEdit(card,ed,i));
+  b('.copy').onclick=()=>{navigator.clipboard.writeText(ed.suggested||'');toast('Copied ✓')};
+  b('.sg-x').onclick=()=>{                       // dismiss: hide without applying
+    ed._dismissed=true;
+    store.set('suggestHistory',suggestHistory);  // stays hidden when revisiting history
+    hideLineHL();card.remove();
+  };
+  card.addEventListener('mouseenter',()=>previewEdit(ed));
+  card.addEventListener('mouseleave',hideLineHL);
+}
+
+/* ---- per-card regenerate: ask for a different option for the same spot ---- */
+async function regenEdit(card,ed,i){
+  if(!hasCreds()){openSettings();return;}
+  const btn=card.querySelector('.regen');
+  const oldLabel=btn.textContent;btn.disabled=true;btn.textContent='⟳ thinking…';
+  const entry=suggestHistory[histIndex]||{};
+  const tried=(ed._tried||[]).concat(ed.suggested?[ed.suggested]:[]);
+  const isAdd=!(ed.original&&(''+ed.original).trim());
+  const prompt=`YOUR ROLE for this task: you are ${entry.role||'an expert lyric editor and songwriting collaborator.'}
+The writer saw your earlier suggestion for one spot and wants a DIFFERENT take on the SAME spot.
+${isAdd
+  ? 'This is a NEW ADDED line (the "original" stays empty).'
+  : `THE LINE BEING IMPROVED (keep "original" exactly this): ${JSON.stringify(ed.original)}`}
+ALREADY-REJECTED SUGGESTIONS — yours must be clearly different from all of these: ${JSON.stringify(tried)}
+Honor the song identity/brief from the system prompt. Same scope and intent, writer's voice, minimal change.
+Reply with ONLY one fenced \`\`\`json block containing exactly one edit:
+[{"original":${JSON.stringify(ed.original||'')},"suggested":"<your new line>","why":"<max ~12 words>"}]
+
+FULL SONG (context only):
+"""
+${editor.value}
+"""`;
+  try{
+    const {text:md}=await callAI(prompt,{maxTokens:400});
+    const alt=(parseEdits(md||'').edits||[])[0];
+    if(!alt||!(''+(alt.suggested||'')).trim())throw new Error('no alternative returned');
+    ed._tried=tried;
+    ed.suggested=(''+alt.suggested).trim();
+    if(alt.why)ed.why=(''+alt.why).trim();
+    store.set('suggestHistory',suggestHistory);
+    const wrap=document.createElement('div');wrap.innerHTML=editCard(ed,i);
+    const fresh=wrap.firstElementChild;
+    card.replaceWith(fresh);wireCard(fresh);
+    toast('New option ✓');
+  }catch(e){
+    toast('Regenerate failed: '+e.message,true);
+    btn.disabled=false;btn.textContent=oldLabel;
+  }
 }
 
 /* ---- locating lines: prefer the tool's target range, then the whole song ---- */
@@ -1192,7 +1282,7 @@ async function runToolObj(t,toolId,hint){
       if(p2.ok){md=second.text;parsed=p2;}
       else parsed={...parsed,rest:parsed.rest||esc(md||'*No response.*')}; // still bad → keep first analysis, flag it
     }
-    const entry={label:t.label,md,edits:parsed.edits,rest:parsed.rest,jsonOk:parsed.ok,tgt,usage,ts:Date.now()};
+    const entry={label:t.label,role:t.role,md,edits:parsed.edits,rest:parsed.rest,jsonOk:parsed.ok,tgt,usage,ts:Date.now()};
     pushHistory(entry);
     renderEntry(entry);
   }catch(e){
@@ -1554,12 +1644,14 @@ document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('mousedown',
 /* build tool rail */
 const TOOL_GROUPS={
   enhance:['rhymes','syllables','cliches','wordplay','imagery','popculture','nextlines','chorus'],
-  analyze:['meanings','cohesion','repetition','structure','review']
+  analyze:['meanings','cohesion','repetition','structure','review'],
+  fun:['kanye']
 };
 const toolBtnHTML=id=>{const t=TOOLS[id];
   return `<button class="tool-btn" data-tool="${id}"><span class="ic">${t.ic}</span><span class="txt">${t.label}<small>${t.sub}</small></span></button>`};
 $('#toolsEnhance').innerHTML=TOOL_GROUPS.enhance.map(toolBtnHTML).join('');
 $('#toolsAnalyze').innerHTML=TOOL_GROUPS.analyze.map(toolBtnHTML).join('');
+$('#toolsFun').innerHTML=TOOL_GROUPS.fun.map(toolBtnHTML).join('');
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>runTool(b.dataset.tool));
 
 /* keyboard */

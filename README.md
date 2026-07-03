@@ -17,6 +17,16 @@ node server.js          # zero dependencies, Node 18+
 The browser talks only to your local backend — **API keys never enter the browser
 or localStorage**. The Settings key field disappears automatically in this mode.
 
+### Option A½ — deploy to Vercel (same server-held keys, but hosted)
+```bash
+npm i -g vercel
+vercel                 # from this directory
+```
+Then add your key(s) in the Vercel dashboard → Project → Settings →
+**Environment Variables** (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`)
+and redeploy. The `api/health.js` + `api/chat.js` edge functions serve the same
+role as `server.js`: keys stay server-side and streaming passes straight through.
+
 ### Option B — no server: open `index.html` directly
 1. Open `index.html` in any modern browser.
 2. On first launch it asks for an **API key** from one of:
@@ -58,6 +68,14 @@ provider you chose — nothing else leaves your machine.
 **Enhance:** Rhymes · Syllables · Clichés · Wordplay · Imagery & Senses ·
 Pop Culture Refs · Improve Next Lines · Chorus
 **Analyze:** Meanings · Compatibility · Repetition · Structure · Full Review
+**Fun:** 🐻 Dropout Bear — hears your song through a College Dropout-era Kanye
+lens: which bars deserve a rewind, where the chipmunk-soul flip drops, and edits
+that give flat lines that early-Ye bounce.
+
+Every suggestion card can be **✕ dismissed** (hidden without applying, sticks
+across history) or **⟳ regenerated** — ask for a different option for that one
+spot; the AI is told which suggestions you already rejected so it won't repeat
+them.
 
 Each tool runs with its own **defined role** (the Rhyme Engineer, the Meter Coach,
 the Continuity Editor, the Reference Digger, the Hook Producer…) and a detailed,
